@@ -72,7 +72,8 @@ public class DownloadDispatcher extends Thread {
 
         this.pausedFutures = new PausedFuturesQueue(maxPaused);
         
-        downloadWorkers = Executors.newFixedThreadPool(parallelDownloads, new ThreadFactory() {
+        //резервируем на все, но одновременно должны работать всё равно только parallelDownloads, остальные будут ждать
+        downloadWorkers = Executors.newFixedThreadPool(parallelDownloads + maxPaused, new ThreadFactory() {
             AtomicInteger threadCount = new AtomicInteger(0);
 
             @Override
@@ -198,11 +199,6 @@ public class DownloadDispatcher extends Thread {
     }
     
     private boolean addDownload(int position) throws InterruptedException {
-        boolean result = false;
-        int currentDownloadsPerThread = 0;
-        List<InternalDownloadRequest> totalRequests = new ArrayList<>(downloadsPerThread);
-        InternalDownloadRequest nextRequest = null;
-        
         if (!pausedFutures.isEmpty()) {//те кто в паузе имеют приоритет
             Iterator<DownloadableFuture<MultipleDownloadResponse>> pausedFuturesIterator = pausedFutures.iterator();
             while (!isInterrupted() && pausedFuturesIterator.hasNext()) {
@@ -227,7 +223,10 @@ public class DownloadDispatcher extends Thread {
             }
         }
         
-        
+        boolean result = false;
+        int currentDownloadsPerThread = 0;
+        List<InternalDownloadRequest> totalRequests = new ArrayList<>(downloadsPerThread);
+        InternalDownloadRequest nextRequest = null;        
         while (!isInterrupted() && currentDownloadsPerThread < downloadsPerThread && (nextRequest = downloadQueue.poll()) != null) { //либо наберём максимальное число загрузок на поток, либо выберем всех из очереди
             String requestId = nextRequest.getRequestId();
             if (DownloadStatusType.CANCELLED.equals(pendingCPR.get(requestId))) {
@@ -258,6 +257,8 @@ public class DownloadDispatcher extends Thread {
                     try {
                         if (downloadQueue.isTransitionAllowed(currentRequestId, currentStatus)) {
                             downloadQueue.updateStatus(currentRequestId, currentStatus);
+                            totalRequests.add(nextRequest);
+                            currentDownloadsPerThread++;
                         }
                         else { //битый запрос отправляем в утиль
                             LOGGER.log(Level.SEVERE, "Кто-то уже обновил статус IN_PROGRESS и невозможно его поменять в {0}. requestId: {1}; URL: {2}", new Object[]{DownloadStatusType.IN_PROGRESS, currentRequestId, nextRequest.getFrom()});
@@ -266,8 +267,6 @@ public class DownloadDispatcher extends Thread {
                         LOGGER.log(Level.SEVERE, "Неожиданная ошибка при попытке обновить статус в {0}. requestId: {1}; URL: {2}\n{3}", new Object[]{DownloadStatusType.IN_PROGRESS, currentRequestId, nextRequest.getFrom(), ex});
                     }
                 //}
-                totalRequests.add(nextRequest);
-                currentDownloadsPerThread++;
             }
         }            
 

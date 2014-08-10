@@ -7,8 +7,11 @@
 package sml.downloader.web;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -85,7 +88,28 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
         
         try {
             if (request instanceof DownloadRequest) {
-                List<URLAcknowledgement> urlAcks = downloader.submit((DownloadRequest) request);
+                DownloadRequest downloadRequest = (DownloadRequest) request;
+                downloadRequest.setRespondTo(respondTo);
+                List<URLAcknowledgement> urlAcks = new ArrayList<URLAcknowledgement>();
+                Iterator<URI> froms = downloadRequest.getFrom().iterator();
+                while (froms.hasNext()) {
+                    URI from = froms.next();
+                    try {
+                        from.toURL(); //это наша валидация на данный момент
+                    }
+                    catch(Exception ex) {
+                        URLAcknowledgement rejectAck = new URLAcknowledgement();
+                        rejectAck.setLink(from);
+                        rejectAck.setReason(ex.getLocalizedMessage());
+                        rejectAck.setStatus(AcknowledgementStatus.REJECTED);
+                        urlAcks.add(rejectAck);
+                        froms.remove();
+                    }
+                }
+                
+                if (!downloadRequest.getFrom().isEmpty()) {
+                    urlAcks.addAll(downloader.submit(downloadRequest));
+                }
                 ackResponse.setUrlAcknowledgements(urlAcks);
             }
             else if (request instanceof MultipleIdRequest) {
@@ -130,7 +154,7 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
         catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "внезапно при получении websocket сообщения", ex);
             ackResponse.setStatus(AcknowledgementStatus.REJECTED);
-            ackResponse.setReason("Внутренняя ошибка");
+            ackResponse.setReason(ex.getMessage());
         }
                     
         try {

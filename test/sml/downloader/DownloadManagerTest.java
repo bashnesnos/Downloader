@@ -32,7 +32,7 @@ public class DownloadManagerTest {
     @BeforeClass
     public static void init() throws NamingException {
         container = javax.ejb.embeddable.EJBContainer.createEJBContainer();
-        instance = (DownloadManager)container.getContext().lookup("java:global/classes/downloader");
+        instance = (DownloadManager) container.getContext().lookup("java:global/classes/downloader");
     }
     
     @AfterClass

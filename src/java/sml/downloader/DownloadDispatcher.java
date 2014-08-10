@@ -26,14 +26,12 @@ import sml.downloader.backend.CompleteQueuingStrategy;
 import sml.downloader.backend.DownloadableFuture;
 import sml.downloader.backend.DownloadsPerThreadStrategy;
 import sml.downloader.backend.ResponseStrategy;
-import sml.downloader.exceptions.DownloadIdCollisionException;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.exceptions.UnsupportedProtocolExeption;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.DownloadStatusType;
 import sml.downloader.model.MultipleDownloadResponse;
 import sml.downloader.model.internal.InternalDownloadRequest;
-import sml.downloader.model.internal.InternalDownloadStatus;
 
 /**
  * 
@@ -97,7 +95,7 @@ public class DownloadDispatcher extends Thread {
 
                 int i = 0;
                 int shift = 0;
-                while (!isInterrupted() && i < cursor) { //проверяем текущие закачки, включая только добавленные
+                while (!isInterrupted() && i < cursor) { //проверяем текущие закачки, включая только что добавленные
                     DownloadableFuture<MultipleDownloadResponse> currentFuture = downloadFutures[i];
                     if (currentFuture.isDone() || tryCancelPauseResume(currentFuture)) {
                         try {
@@ -110,20 +108,20 @@ public class DownloadDispatcher extends Thread {
                             downloadFutures[i].setDelegate(null); //освобождаем место
                         }
 
-                        if (!addDownload(i)) { //не смогли по какой-то причине, значит надо сдвинуть и закрыть 'дырку'
+                        if (!addDownload(i)) { //не смогли по какой-то причине добавить, значит надо сдвинуть и закрыть 'дырку'
                             shift++;
                         }
                     }
                     else { //ещё работает
                         if (shift > 0) {
-                            downloadFutures[i - shift].setDelegate(currentFuture);
+                            downloadFutures[i - shift].setDelegate(currentFuture); //дефрагментируем
                             downloadFutures[i].setDelegate(null);
                         }
                     }
                     i++;
                 }
 
-                cursor = cursor - shift; //убираем фрагментацию
+                cursor = cursor - shift; //компактизация
             }
         } catch (InterruptedException ex) {
             LOGGER.log(Level.FINE, "Диспетчер прерван", ex);
@@ -139,25 +137,35 @@ public class DownloadDispatcher extends Thread {
         while (!isInterrupted() && pendingCPRIterator.hasNext()) { //O(n)
             Map.Entry<String, DownloadStatusType> nextCPR = pendingCPRIterator.next(); 
             String requestId = nextCPR.getKey();
-            switch(nextCPR.getValue()) {
-                case CANCELLED: {
-                    if (inProgressFuture.cancel(requestId)) {
-                        pendingCPRIterator.remove(); 
+            DownloadStatusType newStatus = nextCPR.getValue();
+            try {
+                switch(newStatus) {
+                    case CANCELLED: {
+                        if (inProgressFuture.cancel(requestId)) {
+                            downloadQueue.updateStatus(requestId, newStatus);
+                            pendingCPRIterator.remove(); 
+                        }
+                        break;
                     }
-                    break;
-                }
-                case PAUSED: {
-                    if (inProgressFuture.pause(requestId)) {
-                        pendingCPRIterator.remove();
+                    case PAUSED: {
+                        if (inProgressFuture.pause(requestId)) {
+                            downloadQueue.updateStatus(requestId, newStatus);
+                            pendingCPRIterator.remove();
+                        }
+                        break;
                     }
-                    break;
-                }
-                case RESUMING: {
-                    if (inProgressFuture.resume(requestId)) {
-                       pendingCPRIterator.remove();
+                    case IN_PROGRESS: {
+                        if (inProgressFuture.resume(requestId)) {
+                           downloadQueue.updateStatus(requestId, newStatus);
+                           pendingCPRIterator.remove();
+                        }
+                        break;
                     }
-                    break;
                 }
+            }
+            catch (IllegalDownloadStatusTransitionException idste) {
+                LOGGER.log(Level.SEVERE, "Race condition при попытке обновить статус в {0}. requestId: {1}; \n{3}", new Object[]{newStatus, requestId, idste});
+                pendingCPRIterator.remove();
             }
         }
         
@@ -177,11 +185,28 @@ public class DownloadDispatcher extends Thread {
             String requestId = nextRequest.getRequestId();
             if (DownloadStatusType.CANCELLED.equals(pendingCPR.get(requestId))) {
                 pendingCPR.remove(requestId);
-                sendCancelResponse(nextRequest.getRequestId(), nextRequest.getFrom(), nextRequest.getRespondTo());
+
+                MultipleDownloadResponse response = new MultipleDownloadResponse();
+                DownloadResponse responsePart = new DownloadResponse();
+                removeFinished(requestId);
+                responsePart.setCancelled(true);
+                responsePart.setRequestId(requestId);
+                responsePart.setFrom(nextRequest.getFrom());
+                responsePart.setRespondTo(nextRequest.getRespondTo());
+
+                response.setDownloadResponses(Collections.singletonList(responsePart));
+
+                DownloadStatusType newStatus = DownloadStatusType.CANCELLED;
+                try {
+                    downloadQueue.updateStatus(requestId, newStatus);
+                } catch (IllegalDownloadStatusTransitionException ex) {
+                    LOGGER.log(Level.SEVERE, "Неожиданная ошибка при попытке обновить статус в {0} при отмене закачки. requestId: {1}; URL: {2}\n{3}", new Object[]{newStatus, requestId, responsePart.getFrom(), ex});
+                }
+                responseStrategy.sendResponse(response);
             }
             else {
                 //synchronized(nextRequest) { //если мы получили этот запрос poll'ом из очереди - значит закончился offer и по идее закончилась инициализация
-                    InternalDownloadStatus currentStatus = new InternalDownloadStatus(nextRequest.getFrom(), DownloadStatusType.IN_PROGRESS);
+                    DownloadStatusType currentStatus = DownloadStatusType.IN_PROGRESS;
                     String currentRequestId = nextRequest.getRequestId();
                     try {
                         if (downloadQueue.isTransitionAllowed(currentRequestId, currentStatus)) {
@@ -190,7 +215,7 @@ public class DownloadDispatcher extends Thread {
                         else { //битый запрос отправляем в утиль
                             LOGGER.log(Level.SEVERE, "Кто-то уже обновил статус IN_PROGRESS и невозможно его поменять в {0}. requestId: {1}; URL: {2}", new Object[]{DownloadStatusType.IN_PROGRESS, currentRequestId, nextRequest.getFrom()});
                         }
-                    } catch (IllegalDownloadStatusTransitionException | DownloadIdCollisionException ex) {
+                    } catch (IllegalDownloadStatusTransitionException  ex) {
                         LOGGER.log(Level.SEVERE, "Неожиданная ошибка при попытке обновить статус в {0}. requestId: {1}; URL: {2}\n{3}", new Object[]{DownloadStatusType.IN_PROGRESS, currentRequestId, nextRequest.getFrom(), ex});
                     }
                 //}
@@ -232,7 +257,7 @@ public class DownloadDispatcher extends Thread {
     }
     
     public void resume(String... requestIds) {
-       DownloadStatusType resumingStatus = DownloadStatusType.RESUMING;
+       DownloadStatusType resumingStatus = DownloadStatusType.IN_PROGRESS;
        for (String requestId : requestIds) {
             DownloadStatusType existingPending = pendingCPR.putIfAbsent(requestId, resumingStatus);
             if (resumingStatus.isTransitionAllowedFrom(existingPending)) {
@@ -241,36 +266,19 @@ public class DownloadDispatcher extends Thread {
         }
     }
     
-    private void sendCancelResponse(String requestId, URL from, URL respondTo) {
-        MultipleDownloadResponse response = new MultipleDownloadResponse();
-        DownloadResponse responsePart = new DownloadResponse();
-        removeFinished(requestId);
-        responsePart.setCancelled(true);
-        responsePart.setRequestId(requestId);
-        responsePart.setFrom(from);
-        responsePart.setRespondTo(respondTo);
-        
-        response.setDownloadResponses(Collections.singletonList(responsePart));
-        
-        InternalDownloadStatus newStatus = new InternalDownloadStatus(from, DownloadStatusType.CANCELLED);
-        try {
-            downloadQueue.updateStatus(requestId, newStatus);
-        } catch (IllegalDownloadStatusTransitionException | DownloadIdCollisionException ex) {
-            LOGGER.log(Level.SEVERE, "Неожиданная ошибка при попытке обновить статус в {0} при отмене закачки. requestId: {1}; URL: {2}\n{3}", new Object[]{newStatus, requestId, responsePart.getFrom(), ex});
-        }
-        responseStrategy.sendResponse(response);
-    }
     
     private void sendResponse(MultipleDownloadResponse response) {
         for (DownloadResponse responsePart : response.getDownloadResponses()) {
             //к этому моменту статусы обновляет только диспетчер
             String requestId = responsePart.getRequestId();
             removeFinished(requestId);
-            InternalDownloadStatus newStatus = new InternalDownloadStatus(responsePart.getFrom(), responsePart.isCancelled() ? DownloadStatusType.CANCELLED : DownloadStatusType.FINISHED);
-            try {
-                downloadQueue.updateStatus(requestId, newStatus);
-            } catch (IllegalDownloadStatusTransitionException | DownloadIdCollisionException ex) {
-                LOGGER.log(Level.SEVERE, "Неожиданная ошибка при попытке обновить статус в {0} после закончившейся закачки. requestId: {1}; URL: {2}\n{3}", new Object[]{newStatus, requestId, responsePart.getFrom(), ex});
+            if (!responsePart.isCancelled()) {
+                DownloadStatusType finishedStatus = DownloadStatusType.FINISHED;
+                try {
+                    downloadQueue.updateStatus(requestId, finishedStatus);
+                } catch (IllegalDownloadStatusTransitionException ex) {
+                    LOGGER.log(Level.SEVERE, "Неожиданная ошибка при попытке обновить статус в {0} после закончившейся закачки. requestId: {1}; URL: {2}\n{3}", new Object[]{finishedStatus, requestId, responsePart.getFrom(), ex});
+                }
             }
         }
         //отправка клиенту; должна быть асинхронная тоже по идее; или очень быстрая

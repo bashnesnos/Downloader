@@ -6,11 +6,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import static org.junit.Assert.*;
 import org.junit.Test;
-import sml.downloader.exceptions.DownloadIdCollisionException;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.model.DownloadStatus;
 import sml.downloader.model.DownloadStatusType;
-import sml.downloader.model.internal.InternalDownloadStatus;
+
 
 /**
  *
@@ -25,7 +24,7 @@ public class InMemoryDownloadStatusStrategyTest {
     public void testAddAndGetStatus() throws Exception {
         System.out.println("addStatus");
         String requestId = "test";
-        InternalDownloadStatus status = new InternalDownloadStatus(new URL("http://lopata.com/"), DownloadStatusType.PENDING);
+        DownloadStatusType status = DownloadStatusType.PENDING;
         InMemoryDownloadStatusStrategy instance = new InMemoryDownloadStatusStrategy(2);
         instance.updateStatus(requestId, status);
         DownloadStatus extStatus = instance.getStatus(requestId);
@@ -35,10 +34,10 @@ public class InMemoryDownloadStatusStrategyTest {
     }
 
     @Test
-    public void testIsTransitionDisallowedForSame() throws MalformedURLException, IllegalDownloadStatusTransitionException, DownloadIdCollisionException {
+    public void testIsTransitionDisallowedForSame() throws MalformedURLException, IllegalDownloadStatusTransitionException {
         System.out.println("testIsTransitionDisallowedForSame");
         String requestId = "test";
-        InternalDownloadStatus status = new InternalDownloadStatus(new URL("http://lopata.com/"), DownloadStatusType.PENDING);
+        DownloadStatusType status = DownloadStatusType.PENDING;
         InMemoryDownloadStatusStrategy instance = new InMemoryDownloadStatusStrategy(2);
         instance.updateStatus(requestId, status);
 
@@ -47,21 +46,21 @@ public class InMemoryDownloadStatusStrategyTest {
     }
     
     @Test
-    public void testIsTransitionAllowedForNext() throws MalformedURLException, IllegalDownloadStatusTransitionException, DownloadIdCollisionException {
+    public void testIsTransitionAllowedForNext() throws MalformedURLException, IllegalDownloadStatusTransitionException {
         System.out.println("testIsTransitionAllowedForNext");
         String requestId = "test";
         URL lopataURL = new URL("http://lopata.com/");
-        InternalDownloadStatus pendingStatus = new InternalDownloadStatus(lopataURL, DownloadStatusType.PENDING);
+        DownloadStatusType pendingStatus = DownloadStatusType.PENDING;
         InMemoryDownloadStatusStrategy instance = new InMemoryDownloadStatusStrategy(2);
 
         instance.updateStatus(requestId, pendingStatus);
-            InternalDownloadStatus inProgressStatus = new InternalDownloadStatus(lopataURL, DownloadStatusType.IN_PROGRESS);
+            DownloadStatusType inProgressStatus = DownloadStatusType.IN_PROGRESS;
             assertTrue(instance.isTransitionAllowed(requestId, inProgressStatus));
-            InternalDownloadStatus cancelledStatus = new InternalDownloadStatus(lopataURL, DownloadStatusType.CANCELLED);
+            DownloadStatusType cancelledStatus = DownloadStatusType.CANCELLED;
             assertTrue(instance.isTransitionAllowed(requestId, cancelledStatus));
         instance.updateStatus(requestId, inProgressStatus);
             assertTrue(instance.isTransitionAllowed(requestId, cancelledStatus));
-            InternalDownloadStatus finishedStatus = new InternalDownloadStatus(lopataURL, DownloadStatusType.FINISHED);
+            DownloadStatusType finishedStatus = DownloadStatusType.FINISHED;
             assertTrue(instance.isTransitionAllowed(requestId, finishedStatus));
         instance.updateStatus(requestId, finishedStatus);
     }

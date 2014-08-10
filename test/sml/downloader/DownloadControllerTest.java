@@ -13,18 +13,14 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import static org.junit.Assert.*;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import sml.downloader.backend.DownloadStrategy;
-import sml.downloader.backend.Downloadable;
 import sml.downloader.backend.ResponseStrategy;
 import sml.downloader.backend.impl.InMemoryCompleteQueuingStrategy;
 import sml.downloader.backend.impl.InMemoryDownloadStatusStrategy;
 import sml.downloader.backend.impl.InMemoryQueuingStrategy;
 import sml.downloader.backend.impl.One2OneDownloadsPerThreadStrategy;
 import sml.downloader.backend.impl.StreamedTempFileDownloadStrategy;
-import sml.downloader.backend.impl.SystemOutputResponseStrategy;
-import sml.downloader.exceptions.DownloadIdCollisionException;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.DownloadStatus;
@@ -71,6 +67,8 @@ public class DownloadControllerTest {
                 , responses
                 , downloadsPerThreadStrategy
                 , parallelDownloads);
+        
+        instance.startDispatching();
     }
     
 
@@ -81,7 +79,7 @@ public class DownloadControllerTest {
     public void testEnqueue() throws Exception {
         System.out.println("enqueue");
         String requestId = "test_http";
-        URL from = new URL("http://localhost:8080/dhts.zip");
+        URL from = new URL("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -105,10 +103,10 @@ public class DownloadControllerTest {
      * Test of status method, of class DownloadController.
      */
     @Test
-    public void testFinishedStatus() throws MalformedURLException, IllegalDownloadStatusTransitionException, InterruptedException, DownloadIdCollisionException {
+    public void testFinishedStatus() throws MalformedURLException, IllegalDownloadStatusTransitionException, InterruptedException {
         System.out.println("FINISHED status");
         String requestId = "test_http";
-        URL from = new URL("http://localhost:8080/dhts.zip");
+        URL from = new URL("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -138,7 +136,7 @@ public class DownloadControllerTest {
     public void testCancel() throws Exception {
         System.out.println("cancel");
         String requestId = "test_http_cancel";
-        URL from = new URL("http://localhost:8080/dhts.zip");
+        URL from = new URL("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -170,7 +168,7 @@ public class DownloadControllerTest {
     public void testPauseResume() throws Exception {
         System.out.println("pause & resume");
         String requestId = "test_http_pause_resume";
-        URL from = new URL("http://localhost:8080/dhts.zip");
+        URL from = new URL("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -182,7 +180,7 @@ public class DownloadControllerTest {
 
         List<DownloadStatus> statuses = instance.status(requestId);
         assertTrue(statuses.size() == 1);
-        assertEquals(DownloadStatusType.IN_PROGRESS, statuses.get(0).getStatus());        
+        assertEquals(DownloadStatusType.PAUSED, statuses.get(0).getStatus());        
         
         instance.resume(requestId);
         response = responses.waitFor(requestId);
@@ -210,7 +208,7 @@ public class DownloadControllerTest {
     public void testPauseCancel() throws Exception {
         System.out.println("pause & cancel");
         String requestId = "test_http_pause_cancel";
-        URL from = new URL("http://localhost:8080/dhts.zip");
+        URL from = new URL("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -222,7 +220,7 @@ public class DownloadControllerTest {
 
         List<DownloadStatus> statuses = instance.status(requestId);
         assertTrue(statuses.size() == 1);
-        assertEquals(DownloadStatusType.IN_PROGRESS, statuses.get(0).getStatus());
+        assertEquals(DownloadStatusType.PAUSED, statuses.get(0).getStatus());
         
         instance.cancel(requestId);
         System.out.println("waiting after cancel");

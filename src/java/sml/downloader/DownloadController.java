@@ -8,18 +8,14 @@ package sml.downloader;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 import sml.downloader.backend.CompleteQueuingStrategy;
-import sml.downloader.backend.DownloadStatusStrategy;
 import sml.downloader.backend.DownloadsPerThreadStrategy;
-import sml.downloader.backend.QueuingStrategy;
 import sml.downloader.backend.ResponseStrategy;
-import sml.downloader.exceptions.DownloadIdCollisionException;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.model.DownloadStatus;
-import sml.downloader.model.DownloadStatusType;
 import sml.downloader.model.internal.InternalDownloadRequest;
-import sml.downloader.model.internal.InternalDownloadStatus;
 
 /**
  * 
@@ -30,6 +26,7 @@ public class DownloadController {
     
     private final CompleteQueuingStrategy downloadQueue;
     private final DownloadDispatcher dispatcher;
+    private final AtomicBoolean dispatchingStarted = new AtomicBoolean(false);
     public  DownloadController( CompleteQueuingStrategy downloadQueue
             , ResponseStrategy responseStrategy
             , DownloadsPerThreadStrategy downloadsPerThreadStrategy
@@ -39,10 +36,15 @@ public class DownloadController {
                 , responseStrategy
                 , downloadsPerThreadStrategy
                 , parallelDownloads);
-        dispatcher.start(); //this не передаю, должно быть ок
     }
 
-    public boolean enqueue(InternalDownloadRequest request) throws IllegalDownloadStatusTransitionException, DownloadIdCollisionException {
+    public void startDispatching() {
+        if (dispatchingStarted.compareAndSet(false, true)) {
+            dispatcher.start();
+        }
+    }
+    
+    public boolean enqueue(InternalDownloadRequest request) throws IllegalDownloadStatusTransitionException {
         return downloadQueue.offer(request); //начальный статус и другие дела управлются очередью
     }
     

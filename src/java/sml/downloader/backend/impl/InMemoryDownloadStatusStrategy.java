@@ -6,18 +6,15 @@
 
 package sml.downloader.backend.impl;
 
-import java.net.URL;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import sml.downloader.backend.DownloadStatusStrategy;
-import sml.downloader.exceptions.DownloadIdCollisionException;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.model.DownloadStatus;
 import sml.downloader.model.DownloadStatusType;
-import sml.downloader.model.internal.InternalDownloadStatus;
 
 /**
  * 
@@ -26,46 +23,38 @@ import sml.downloader.model.internal.InternalDownloadStatus;
 public class InMemoryDownloadStatusStrategy implements DownloadStatusStrategy {
     private final static Logger LOGGER = Logger.getLogger(InMemoryDownloadStatusStrategy.class.getName());
     
-    private final ConcurrentHashMap<String, InternalDownloadStatus> requestStatuses;
-    private final Map<String, InternalDownloadStatus> finishedOrCancelled;
+    private final ConcurrentHashMap<String, DownloadStatusType> requestStatuses;
+    private final Map<String, DownloadStatusType> finishedOrCancelled;
     
     public InMemoryDownloadStatusStrategy(int downloadQueueSize) {
         requestStatuses = new ConcurrentHashMap<>(downloadQueueSize + 4, 1.0f); //количество индивидуальных загрузок равно количеству статусов
-        finishedOrCancelled = Collections.<String, InternalDownloadStatus> synchronizedMap(new LinkedFIFOCache<String, InternalDownloadStatus>(1 << 8));
+        finishedOrCancelled = Collections.<String, DownloadStatusType> synchronizedMap(new LinkedFIFOCache<String, DownloadStatusType>(1 << 8));
     }
 
     @Override
-    public void updateStatus(String requestId, InternalDownloadStatus newStatus) throws IllegalDownloadStatusTransitionException, DownloadIdCollisionException {
-        //это больше downloadId конечно
-        DownloadStatusType newStatusType = newStatus.getStatus();
-        URL newURL = newStatus.getLink();
+    public void updateStatus(String requestId, DownloadStatusType newStatusType) throws IllegalDownloadStatusTransitionException {
+        
+        //URL newURL = newStatus.getLink();
         //synchronized(newURL) { //в общем-то, этот метод для одного и того же запроса вызывается в один поток - либо при начальной вставке; либо при переводе статуса диспетчером
-            InternalDownloadStatus currentStatus = requestStatuses.get(requestId);
-            if (currentStatus == null) {
+            DownloadStatusType currentStatusType = requestStatuses.get(requestId);
+            if (currentStatusType == null) {
                 if (newStatusType.isTransitionAllowedFrom(null)) {
-                    requestStatuses.put(requestId, newStatus);
+                    requestStatuses.put(requestId, newStatusType);
                 }
                 else {
                     throw new IllegalDownloadStatusTransitionException(null, newStatusType);
                 }
             }
             else {
-                DownloadStatusType currentStatusType = currentStatus.getStatus();
-                URL oldURL = currentStatus.getLink();
-                
-                if (!oldURL.equals(newURL)) {
-                    throw new DownloadIdCollisionException(requestId, oldURL, newURL);
-                }
-                
                 switch(newStatusType) {
                     case CANCELLED: case FINISHED: { //эмулирует какой-нибудь более медленный источник для сброса завершённых закачек; по идее тоже надо асинхронно
-                        finishedOrCancelled.put(requestId, newStatus); //даже если есть - обновляем
+                        finishedOrCancelled.put(requestId, newStatusType); //даже если есть - обновляем
                         requestStatuses.remove(requestId); //убираем отработавшую закачку
                         break;
                     }
                     default: {
                         if (newStatusType.isTransitionAllowedFrom(currentStatusType)) {
-                            requestStatuses.put(requestId, newStatus);
+                            requestStatuses.put(requestId, newStatusType);
                         }
                         else {
                             throw new IllegalDownloadStatusTransitionException(currentStatusType, newStatusType);
@@ -79,7 +68,7 @@ public class InMemoryDownloadStatusStrategy implements DownloadStatusStrategy {
 
     @Override
     public DownloadStatus getStatus(String requestId) {
-        InternalDownloadStatus downloadStatus = requestStatuses.get(requestId);
+        DownloadStatusType downloadStatus = requestStatuses.get(requestId);
         if (downloadStatus == null) {
             //может означать, что все CANCELLED и FINISHED, если мы их будем убирать из таблицы
             downloadStatus = finishedOrCancelled.get(requestId);
@@ -91,34 +80,26 @@ public class InMemoryDownloadStatusStrategy implements DownloadStatusStrategy {
         DownloadStatus response = new DownloadStatus();
 
         response.setRequestId(requestId);
-        response.setLink(downloadStatus.getLink());
-        response.setStatus(downloadStatus.getStatus());
+        response.setStatus(downloadStatus);
         
         return response;
 
     }
 
     @Override
-    public boolean isTransitionAllowed(String requestId, InternalDownloadStatus newStatus) throws DownloadIdCollisionException {
-        InternalDownloadStatus currentStatus = requestStatuses.get(requestId);
-        DownloadStatusType newStatusType = newStatus.getStatus();
-        if (currentStatus == null) {
+    public boolean isTransitionAllowed(String requestId, DownloadStatusType newStatusType) {
+        DownloadStatusType currentStatusType = requestStatuses.get(requestId);
+        
+        if (currentStatusType == null) {
             return newStatusType.isTransitionAllowedFrom(null);
         }
         else {
-            URL oldURL = currentStatus.getLink();
-            URL newURL = newStatus.getLink();
-            if (!oldURL.equals(newURL)) {
-                throw new DownloadIdCollisionException(requestId, oldURL, newURL);
-            }
-            
-            DownloadStatusType currentStatusType = currentStatus.getStatus();
             return newStatusType.isTransitionAllowedFrom(currentStatusType);
         }
     }
 
     @Override
-    public InternalDownloadStatus removeStatus(String requestId) {
+    public DownloadStatusType removeStatus(String requestId) {
         return requestStatuses.remove(requestId);
     }
 

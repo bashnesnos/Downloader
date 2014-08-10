@@ -62,7 +62,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         System.out.println("getHttp");
 
         String requestId = "test_http";
-        URL from = new URL("http://localhost:8080/dhts.zip");
+        URL from = new URL("http://localhost:9080/dhts.zip");
         InternalDownloadRequest[] requests = { new InternalDownloadRequest(requestId
                 , from
                 , null) };
@@ -87,7 +87,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         System.out.println("getHttp");
 
         String requestId = "test_http";
-        URL from = new URL("http://localhost:8080/dhts.zip");
+        URL from = new URL("http://localhost:9080/dhts.zip");
         InternalDownloadRequest[] requests = { new InternalDownloadRequest(requestId
                 , from
                 , null) };
@@ -119,7 +119,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         System.out.println("getHttp");
 
         String requestId = "test_http_cancel";
-        URL from = new URL("http://localhost:8080/dhts.zip");
+        URL from = new URL("http://localhost:9080/dhts.zip");
         InternalDownloadRequest[] requests = { new InternalDownloadRequest(requestId
                 , from
                 , null) };

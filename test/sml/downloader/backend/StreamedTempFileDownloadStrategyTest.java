@@ -38,7 +38,7 @@ public class StreamedTempFileDownloadStrategyTest {
     public void testHttpDownload() throws Exception {
         System.out.println("getHTTP");
         String requestId = "test_http";
-        InternalDownloadRequest singleRequest = new InternalDownloadRequest(requestId, new URL("http://localhost:8080/dhts.zip"), null);
+        InternalDownloadRequest singleRequest = new InternalDownloadRequest(requestId, new URL("http://localhost:9080/dhts.zip"), null);
         InternalDownloadRequest[] requests = { singleRequest };
         StreamedTempFileDownloadStrategy instance = new StreamedTempFileDownloadStrategy(tempDir, inboxDir, externalInboxURL);
         DownloadResponse expResult = new DownloadResponse();

@@ -6,15 +6,17 @@
 
 package sml.downloader.model;
 
+import java.net.URL;
 
 /**
- * Для внешних, JAXB там ещё что прикручивать
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public class DownloadStatus {
+public class URLAcknowledgement {
     private String requestId;
-    private DownloadStatusType status;
+    private URL link;
+    private AcknowledgementStatus status;
+    private String reason;
 
     public String getRequestId() {
         return requestId;
@@ -24,12 +26,28 @@ public class DownloadStatus {
         this.requestId = requestId;
     }
     
-    public DownloadStatusType getStatus() {
+    public URL getLink() {
+        return link;
+    }
+
+    public void setLink(URL link) {
+        this.link = link;
+    }
+
+    public AcknowledgementStatus getStatus() {
         return status;
     }
 
-    public void setStatus(DownloadStatusType status) {
+    public void setStatus(AcknowledgementStatus status) {
         this.status = status;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
     }
     
     

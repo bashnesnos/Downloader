@@ -7,12 +7,10 @@
 package sml.downloader.backend.impl;
 
 import sml.downloader.backend.CompleteQueuingStrategy;
-import sml.downloader.exceptions.DownloadIdCollisionException;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.model.DownloadStatus;
 import sml.downloader.model.DownloadStatusType;
 import sml.downloader.model.internal.InternalDownloadRequest;
-import sml.downloader.model.internal.InternalDownloadStatus;
 
 /**
  * Отражает идею, что в общем-то очередь и статусы это практически одна сущность;
@@ -33,11 +31,11 @@ public class InMemoryCompleteQueuingStrategy implements CompleteQueuingStrategy 
     }
     
     @Override
-    public boolean offer(InternalDownloadRequest request) throws IllegalDownloadStatusTransitionException, DownloadIdCollisionException {
+    public boolean offer(InternalDownloadRequest request) throws IllegalDownloadStatusTransitionException {
         boolean result = false;
         
         String requestId = request.getRequestId();
-        InternalDownloadStatus pendingStatus = new InternalDownloadStatus(request.getFrom(), DownloadStatusType.PENDING);
+        DownloadStatusType pendingStatus = DownloadStatusType.PENDING;
         //synchronized(request) { //не должно, но на случай если JIT будет менять порядок updateStatus и offer и может так случиться, что диспетчер заберёт запрос из очереди без статуса
             
             if (downloadStatuses.isTransitionAllowed(requestId, pendingStatus)) {
@@ -69,17 +67,17 @@ public class InMemoryCompleteQueuingStrategy implements CompleteQueuingStrategy 
     }
 
     @Override
-    public void updateStatus(String requestId, InternalDownloadStatus status) throws IllegalDownloadStatusTransitionException, DownloadIdCollisionException {
+    public void updateStatus(String requestId, DownloadStatusType status) throws IllegalDownloadStatusTransitionException {
         downloadStatuses.updateStatus(requestId, status);
     }
 
     @Override
-    public InternalDownloadStatus removeStatus(String requestId) {
+    public DownloadStatusType removeStatus(String requestId) {
         return downloadStatuses.removeStatus(requestId);
     }
 
     @Override
-    public boolean isTransitionAllowed(String requestId, InternalDownloadStatus status) throws DownloadIdCollisionException {
+    public boolean isTransitionAllowed(String requestId, DownloadStatusType status) {
         return downloadStatuses.isTransitionAllowed(requestId, status);
     }
 

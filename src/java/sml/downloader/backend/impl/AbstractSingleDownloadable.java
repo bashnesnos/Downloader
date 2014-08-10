@@ -114,7 +114,7 @@ public abstract class AbstractSingleDownloadable implements Downloadable<Multipl
     @Override
     public boolean cancel(String requestId) {
         if (this.requestId.equals(requestId)) {
-            return cancelled = true;
+            return !cancelled && (cancelled = true);
         }
         return false;
     }
@@ -123,7 +123,7 @@ public abstract class AbstractSingleDownloadable implements Downloadable<Multipl
     @Override
     public boolean pause(String requestId) {
         if (this.requestId.equals(requestId)) {
-            return paused = true; //несколько пауз подряд не страшно
+            return !cancelled && (paused = true); //несколько пауз подряд не страшно
         }
         return false;
     }

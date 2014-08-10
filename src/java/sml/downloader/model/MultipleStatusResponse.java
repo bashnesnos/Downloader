@@ -12,7 +12,7 @@ import java.util.List;
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public class MultipleIdStatusResponse {
+public class MultipleStatusResponse {
     private List<DownloadStatus> statusResponses;
 
     public List<DownloadStatus> getStatusResponses() {

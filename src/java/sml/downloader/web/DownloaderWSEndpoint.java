@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -63,20 +64,33 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
 
     private RemoteEndpoint.Async asyncRemote;
     private URI respondTo;
+    private URL serverUrl;
     
     @OnOpen
-    public void open(Session session, EndpointConfig conf) throws URISyntaxException, NamingException { 
-        if (downloader == null) {
-            LOGGER.log(Level.SEVERE, "donwloader то <null>");
-            downloader = (DownloadManager) InitialContext.doLookup("java:global/Downloader/downloader");
+    public void open(Session session, EndpointConfig conf) { 
+        try {
+            if (downloader == null) {
+                LOGGER.log(Level.SEVERE, "donwloader то <null>");
+                downloader = (DownloadManager) InitialContext.doLookup("java:global/Downloader/downloader");
+            }
+
+            if (replier == null) {
+                LOGGER.log(Level.SEVERE, "replier то <null>");
+                replier = (OrchestratingResponseStrategy) InitialContext.doLookup("java:global/Downloader/replier");
+            }
+        } catch (NamingException ex) {
+            LOGGER.log(Level.SEVERE, "внезапно при открытии websocket", ex);
+            throw new RuntimeException(ex);
         }
-        
-        if (replier == null) {
-            LOGGER.log(Level.SEVERE, "replier то <null>");
-            replier = (OrchestratingResponseStrategy) InitialContext.doLookup("java:global/Downloader/replier");
+
+        try {
+            respondTo = new URI("/ws/" + session.getId());
         }
-        
-        respondTo = new URI("/ws/" + session.getId());
+        catch (URISyntaxException ex) {
+            LOGGER.log(Level.SEVERE, "внезапно при открытии websocket", ex);
+            throw new RuntimeException(ex);
+        }
+
         replier.registerStrategy(respondTo.toString(), this);
         asyncRemote = session.getAsyncRemote();
     }
@@ -90,7 +104,7 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
             if (request instanceof DownloadRequest) {
                 DownloadRequest downloadRequest = (DownloadRequest) request;
                 downloadRequest.setRespondTo(respondTo);
-                List<URLAcknowledgement> urlAcks = new ArrayList<URLAcknowledgement>();
+                List<URLAcknowledgement> urlAcks = new ArrayList<>();
                 Iterator<URI> froms = downloadRequest.getFrom().iterator();
                 while (froms.hasNext()) {
                     URI from = froms.next();

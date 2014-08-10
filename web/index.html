@@ -6,23 +6,54 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body>
-        <div style="margin-left: 33.33%; margin-top: 15%; width: 33.33%">
+
+        <div style="margin-left: 25%; margin-top: 5%; width: 50%">
+            <table id="downloads">
+                <thead>
+                    <tr>
+                        <td>URL</td>
+                        <td>Статус</td>
+                        <td>Результат</td>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        <br/>
+        <div style="margin-left: 33.33%;  width: 33.33%">
             <input type="text" id="url_from" />
             <button id="download">Скачать</button>
-            
+            <div id="statuses"></div>
         </div>
 
         <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
         <script type="text/javascript">
             var downloaderSocket = new WebSocket("ws://localhost:8080/Downloader/downloader-ws");
             downloaderSocket.onmessage = function (event) {
-                var err 
-                    , msg = event.data;
+                var msg = event.data;
                 console.log(msg);
-                err = msg.match(/<ack><status>REJECTED<\/status><reason>(.*?)<\/reason><\/ack>/);
-                if (err !== null) {
-                    alert(err[1]);
+                var bigErr = msg.match(/<ack><status>REJECTED<\/status><reason>(.*?)<\/reason><\/ack>/);
+                if (bigErr !== null) {
+                    $('#statuses').after("Fatal: " + err[1]).fadeOut(2000);
                 }
+                
+                var urlAck = msg.match(/<ack>(?:<urlAck><requestId>(.*?)<\/requestId><link>(.*?)<\/link><status>(.*?)<\/status><\/urlAck>)+<\/ack>/);
+                if (urlAck !== null) {
+                    $('#downloads thead').after("<tr id='" + urlAck[1] + "'><td>"+urlAck[2]+"</td><td>"+urlAck[3]+"</td><td></td><td><button id='check'>?</button></td><td><button id='pause'>||</button></td><td><button id='cancel'>X</button></td></tr>");
+                    if ($('#url_from').val() === urlAck[2]) {
+                        $('#url_from').val('');
+                    }
+                }
+                
+                var resultAck = msg.match(/<result>(?:<requestId>(.*?)<\/requestId><from>.*?<\/from><link>(.*?)<\/link><data>(.*?)<\/data><cancelled>false<\/cancelled>)*<\/result>/); //тут у нас успешные результаты
+                if (resultAck !== null) {
+                    var cells = $('#' + resultAck[1]).children('td');
+                    $(cells[1]).html('FINISHED');
+                    $(cells[2]).html("<a href='"+resultAck[2]+"'>"+resultAck[2]+"</a>");
+                    $(cells[3]).html("<button id='restart'>&gt;&gt;</button>");
+                    $(cells[4]).html('');
+                    $(cells[5]).html('');
+                }
+                
             };
             
             

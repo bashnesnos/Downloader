@@ -7,13 +7,18 @@
 package sml.downloader;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -58,21 +63,38 @@ public class DownloadManager {
     
     @PostConstruct
     void init() {
-        int queueSize = 5;
-        int parallelDownloads = 3; //чтобы было меньше чем очередь
+        Properties props = null;
+        InputStream propertiesStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("downloader.properties");
+        if (propertiesStream != null) {
+            props = new Properties();
+            try {
+                props.load(propertiesStream);
+                LOGGER.log(Level.INFO, "Настройки: \n\t {0}", props);
+            } 
+            catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        else {
+            LOGGER.log(Level.SEVERE, "downloader.properties не обнаружен!");
+        }
+        
+        int queueSize = props != null ? Integer.valueOf(props.getProperty("queueSize")) : 5;
+        int parallelDownloads = props != null ? Integer.valueOf(props.getProperty("parallelDownloads")) : 3; //чтобы было меньше чем очередь
+
         InMemoryQueuingStrategy queue = new InMemoryQueuingStrategy(queueSize);
         InMemoryDownloadStatusStrategy downloadStatuses = new InMemoryDownloadStatusStrategy(queueSize);
         InMemoryCompleteQueuingStrategy completeQueue = new InMemoryCompleteQueuingStrategy(downloadStatuses, queue);
         
-        File tempDir = new File("C:\\downloader\\temp");
-        File inboxDir = new File("C:\\downloader\\inbox");
+        File tempDir = new File(props != null ? props.getProperty("tempDir") : "./temp");
+        File inboxDir = new File(props != null ? props.getProperty("inboxDir") : "./inbox"); //идея в том, чтобы после загрузки файл попадал в публично доступное место; пока тупо копируется в папку с проектом, по хорошему надо сервлет который из любого места гребёт
 
         tempDir.mkdirs();
         inboxDir.mkdirs();
         
         URL externalInboxURL;
         try {
-            externalInboxURL = new URL("http://downloader.test.ru/inbox");
+            externalInboxURL = new URL(props != null ? props.getProperty("publicHostURL") + "/Downloader/inbox" : "http://vocalhost:9797/Downloader/inbox");
         } catch (MalformedURLException ex) {
             throw new RuntimeException(ex);
         }

@@ -6,6 +6,7 @@
 
 package sml.downloader;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -41,6 +42,7 @@ public class DownloadDispatcher extends Thread {
     
     private final CompleteQueuingStrategy downloadQueue;
     private final DelegateFuture[] downloadFutures;
+    private final PausedFuturesQueue pausedFutures; //чтобы не занимали место
     private final DownloadsPerThreadStrategy downloadsPerThreadStrategy;
     private final OrchestratingResponseStrategy responseStrategy;
     private final int parallelDownloads;
@@ -56,7 +58,8 @@ public class DownloadDispatcher extends Thread {
     public DownloadDispatcher(CompleteQueuingStrategy downloadQueue
             , OrchestratingResponseStrategy responseStrategy
             , DownloadsPerThreadStrategy downloadsPerThreadStrategy
-            , int parallelDownloads) {
+            , int parallelDownloads
+            , int maxPaused) {
         this.parallelDownloads = parallelDownloads;
         this.downloadQueue = downloadQueue;
         this.responseStrategy = responseStrategy;
@@ -67,6 +70,8 @@ public class DownloadDispatcher extends Thread {
             downloadFutures[i] = new DelegateFuture();
         }
 
+        this.pausedFutures = new PausedFuturesQueue(maxPaused);
+        
         downloadWorkers = Executors.newFixedThreadPool(parallelDownloads, new ThreadFactory() {
             AtomicInteger threadCount = new AtomicInteger(0);
 
@@ -86,8 +91,8 @@ public class DownloadDispatcher extends Thread {
     public void run() {
         try {
             while(!isInterrupted()) {
-                if (cursor < parallelDownloads) { //сначала набираем из очереди
-                    if (addDownload(cursor)) {
+                if (cursor < parallelDownloads) { //есть свободное место
+                    if (addDownload(cursor)) { //набираем из очереди
                         cursor++;
                     }
                 }
@@ -97,16 +102,28 @@ public class DownloadDispatcher extends Thread {
                 while (!isInterrupted() && i < cursor) { //проверяем текущие закачки, включая только что добавленные
                     DownloadableFuture<MultipleDownloadResponse> currentFuture = downloadFutures[i];
                     if (currentFuture.isDone() || tryCancelPauseResume(currentFuture)) {
-                        try {
-                            //нужно отправить ответ, и взять ещё закачку
-                            sendResponse(currentFuture.get());
-                        } catch (ExecutionException ex) {
-                            LOGGER.log(Level.SEVERE, "Неожиданная ошибка, по идее уже всё завершилось так или иначе", ex);
+                        
+                        if (currentFuture.isDone()) {
+                            try {
+                                //нужно отправить ответ, и взять ещё закачку
+                                sendResponse(currentFuture.get(), false);
+                            } catch (ExecutionException ex) {
+                                LOGGER.log(Level.SEVERE, "Неожиданная ошибка, по идее уже всё завершилось так или иначе", ex);
+                            }
+                            finally {
+                                downloadFutures[i].setDelegate(null); //освобождаем место
+                            }
+                        } else if (!currentFuture.hasActive()) {
+                            //нужно отправить в место ожидания
+                            try {
+                                pausedFutures.add(downloadFutures[i].getDelegate());
+                            }
+                            finally {
+                                downloadFutures[i].setDelegate(null); //освобождаем место
+                            }
+                            
                         }
-                        finally {
-                            downloadFutures[i].setDelegate(null); //освобождаем место
-                        }
-
+                        
                         if (!addDownload(i)) { //не смогли по какой-то причине добавить, значит надо сдвинуть и закрыть 'дырку'
                             shift++;
                         }
@@ -130,7 +147,7 @@ public class DownloadDispatcher extends Thread {
         }
     }
     
-    //вернёт true если вся задача была отменена целиком и её надо утилизировать
+    //вернёт true если вся задача была отменена целиком и её надо утилизировать; или если она вся в паузе и её надо убрать в запас
     private boolean tryCancelPauseResume(DownloadableFuture<MultipleDownloadResponse> inProgressFuture) {
         Iterator<Map.Entry<String, DownloadStatusType>> pendingCPRIterator = pendingCPR.entrySet().iterator();
         while (!isInterrupted() && pendingCPRIterator.hasNext()) { //O(n)
@@ -168,18 +185,44 @@ public class DownloadDispatcher extends Thread {
             }
         }
         
-        return inProgressFuture.isCancelled();
+        return inProgressFuture.isCancelled() || !inProgressFuture.hasActive();
     }
     
     private void removeFinished(String requestId) {
         pendingCPR.remove(requestId);
     }
     
-    private boolean addDownload(int position) {
+    private boolean addDownload(int position) throws InterruptedException {
         boolean result = false;
         int currentDownloadsPerThread = 0;
         List<InternalDownloadRequest> totalRequests = new ArrayList<>(downloadsPerThread);
         InternalDownloadRequest nextRequest = null;
+        
+        if (!pausedFutures.isEmpty()) {//те кто в паузе имеют приоритет
+            Iterator<DownloadableFuture<MultipleDownloadResponse>> pausedFuturesIterator = pausedFutures.iterator();
+            while (!isInterrupted() && pausedFuturesIterator.hasNext()) {
+                DownloadableFuture<MultipleDownloadResponse> pausedFuture = pausedFuturesIterator.next();
+                tryCancelPauseResume(pausedFuture);
+                if (pausedFuture.isDone()) {
+                    try {
+                        //нужно отправить ответ
+                        sendResponse(pausedFuture.get(), false);
+                    } catch (ExecutionException ex) {
+                        LOGGER.log(Level.SEVERE, "Неожиданная ошибка при обработке ждущих задач, по идее уже всё завершилось так или иначе", ex);
+                    }
+                    finally {
+                        pausedFuturesIterator.remove();
+                    }
+                }
+                else if (pausedFuture.hasActive()) { //пробудилось хоть что-то
+                    downloadFutures[position].setDelegate(pausedFuture);
+                    pausedFuturesIterator.remove();
+                    return true;
+                }
+            }
+        }
+        
+        
         while (!isInterrupted() && currentDownloadsPerThread < downloadsPerThread && (nextRequest = downloadQueue.poll()) != null) { //либо наберём максимальное число загрузок на поток, либо выберем всех из очереди
             String requestId = nextRequest.getRequestId();
             if (DownloadStatusType.CANCELLED.equals(pendingCPR.get(requestId))) {
@@ -266,32 +309,38 @@ public class DownloadDispatcher extends Thread {
     }
     
     
-    private void sendResponse(MultipleDownloadResponse response) {
+    private void sendResponse(MultipleDownloadResponse response, boolean propagateCancelStatus) {
         for (DownloadResponse responsePart : response.getDownloadResponses()) {
             //к этому моменту статусы обновляет только диспетчер
             String requestId = responsePart.getRequestId();
             removeFinished(requestId);
-            if (!responsePart.isCancelled()) {
-                DownloadStatusType finishedStatus = DownloadStatusType.FINISHED;
+
+            if (propagateCancelStatus || !responsePart.isCancelled()) {
+                DownloadStatusType finishedStatus =  responsePart.isCancelled() ? DownloadStatusType.CANCELLED :DownloadStatusType.FINISHED;
                 try {
                     downloadQueue.updateStatus(requestId, finishedStatus);
                 } catch (IllegalDownloadStatusTransitionException ex) {
                     LOGGER.log(Level.SEVERE, "Неожиданная ошибка при попытке обновить статус в {0} после закончившейся закачки. requestId: {1}; URL: {2}\n{3}", new Object[]{finishedStatus, requestId, responsePart.getFrom(), ex});
                 }
             }
+
         }
         //отправка клиенту; должна быть асинхронная тоже по идее; или очень быстрая
         responseStrategy.sendResponse(response);
     }
 
     
-    //это у нас держалка для реальных будующих
+    //это у нас держалка для реальных задач
     private static class DelegateFuture implements DownloadableFuture<MultipleDownloadResponse> {
 
         private DownloadableFuture<MultipleDownloadResponse> delegate;
         
         public void setDelegate(DownloadableFuture<MultipleDownloadResponse> delegate) {
             this.delegate = delegate;
+        }
+
+        public DownloadableFuture<MultipleDownloadResponse> getDelegate() {
+            return delegate;
         }
         
         @Override
@@ -360,5 +409,33 @@ public class DownloadDispatcher extends Thread {
         }
 
     }
-        
+
+    private class PausedFuturesQueue extends ArrayDeque<DownloadableFuture<MultipleDownloadResponse>> {
+        private static final long serialVersionUID = 3106623977485295065L;
+        private final int maxCapacity;
+
+        public PausedFuturesQueue(int size) {
+            super(size + 1);
+            maxCapacity = size;
+        }
+
+        @Override
+        public boolean add(DownloadableFuture e) {
+            if (super.add(e)) {
+                if (size() > maxCapacity) {
+                    DownloadableFuture<MultipleDownloadResponse> pausedTooLong = removeFirst();
+                    pausedTooLong.cancel(true); //все отменяем
+                    try {
+                        sendResponse(pausedTooLong.get(), true); //тут может быть затык, если отмена довольно медленная
+                    } catch (InterruptedException | ExecutionException ex) {
+                        LOGGER.log(Level.SEVERE, "внезапно при отмене сдохшей паузы", ex);
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+    }
 }
+

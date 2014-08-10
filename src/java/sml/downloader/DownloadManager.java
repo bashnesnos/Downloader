@@ -81,7 +81,13 @@ public class DownloadManager {
         
         int queueSize = props != null ? Integer.valueOf(props.getProperty("queueSize")) : 5;
         int parallelDownloads = props != null ? Integer.valueOf(props.getProperty("parallelDownloads")) : 3; //чтобы было меньше чем очередь
+        int maxPaused = props != null ? Integer.valueOf(props.getProperty("maxPaused")) : 3; //не может быть больше чем параллельных загрузок, а то ещё одна очередь получается
 
+        if (maxPaused > parallelDownloads) {
+            LOGGER.log(Level.WARNING, "Слишком большее число PAUSED закачек {0}; ставим в {1}", new Object[]{maxPaused, parallelDownloads});
+            maxPaused = parallelDownloads;
+        }
+        
         InMemoryQueuingStrategy queue = new InMemoryQueuingStrategy(queueSize);
         InMemoryDownloadStatusStrategy downloadStatuses = new InMemoryDownloadStatusStrategy(queueSize);
         InMemoryCompleteQueuingStrategy completeQueue = new InMemoryCompleteQueuingStrategy(downloadStatuses, queue);
@@ -113,7 +119,8 @@ public class DownloadManager {
         this.controller = new DownloadController(completeQueue
         , replier
         , downloadsPerThreadStrategy
-        , parallelDownloads);  
+        , parallelDownloads
+        , maxPaused);  
         
         controller.startDispatching();
     }

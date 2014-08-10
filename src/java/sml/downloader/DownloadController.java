@@ -30,12 +30,14 @@ public class DownloadController {
     public  DownloadController( CompleteQueuingStrategy downloadQueue
             , OrchestratingResponseStrategy responseStrategy
             , DownloadsPerThreadStrategy downloadsPerThreadStrategy
-            , int parallelDownloads) {
+            , int parallelDownloads
+            , int maxPaused) {
         this.downloadQueue = downloadQueue;
         this.dispatcher = new DownloadDispatcher(downloadQueue
                 , responseStrategy
                 , downloadsPerThreadStrategy
-                , parallelDownloads);
+                , parallelDownloads
+                , maxPaused);
     }
 
     public void startDispatching() {

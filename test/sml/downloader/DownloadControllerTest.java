@@ -25,10 +25,12 @@ import sml.downloader.backend.impl.InMemoryQueuingStrategy;
 import sml.downloader.backend.impl.One2OneDownloadsPerThreadStrategy;
 import sml.downloader.backend.impl.StreamedTempFileDownloadStrategy;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
+import sml.downloader.exceptions.RequestRejectedException;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.DownloadStatus;
 import sml.downloader.model.DownloadStatusType;
 import sml.downloader.model.MultipleDownloadResponse;
+import sml.downloader.model.MultipleStatusResponse;
 import sml.downloader.model.internal.InternalDownloadRequest;
 
 /**
@@ -70,6 +72,7 @@ public class DownloadControllerTest {
         this.instance = new DownloadController(completeQueue
                 , responses
                 , downloadsPerThreadStrategy
+                , parallelDownloads
                 , parallelDownloads);
         
         instance.startDispatching();
@@ -165,6 +168,82 @@ public class DownloadControllerTest {
         assertEquals(DownloadStatusType.CANCELLED, statuses.get(0).getStatus());
     }
 
+    private void assertStatus(String requestId, DownloadStatusType status){
+        List<DownloadStatus> statuses = instance.status(requestId);
+        assertTrue(statuses.size() == 1);
+        assertEquals(status, statuses.get(0).getStatus());   
+    }
+    
+    /**
+     * Test of pause method, of class DownloadController.
+     */
+    @Test
+    public void testPausesMoreThanParallelDownloads() throws Exception {
+        System.out.println("pause 4 times");
+        String requestId = "test_http_4_pause";
+        URI from = new URI("http://localhost:9080/dhts.zip");
+        InternalDownloadRequest request = new InternalDownloadRequest(requestId
+                , from
+                , RESPOND_TO);
+        assertTrue(instance.enqueue(request));
+        instance.pause(requestId);
+
+        Thread.sleep(2000);
+        assertStatus(requestId, DownloadStatusType.PAUSED);
+        
+        String requestId2 = requestId + 1;
+        request = new InternalDownloadRequest(requestId2
+                , from
+                , RESPOND_TO);
+        assertTrue(instance.enqueue(request));
+        instance.pause(requestId2);        
+
+        Thread.sleep(2000);
+        assertStatus(requestId2, DownloadStatusType.PAUSED);
+
+        
+        String requestId3 = requestId2 + 1;
+        request = new InternalDownloadRequest(requestId3
+                , from
+                , RESPOND_TO);
+        assertTrue(instance.enqueue(request));
+        instance.pause(requestId3);           
+        
+        Thread.sleep(2000);
+        assertStatus(requestId3, DownloadStatusType.PAUSED);
+        
+        String requestId4 = requestId3 + 1;
+        request = new InternalDownloadRequest(requestId4
+                , from
+                , RESPOND_TO);
+        assertTrue(instance.enqueue(request)); //по идее всё ок
+        instance.pause(requestId4); //должен отменить первый
+
+        Thread.sleep(2000);
+        assertStatus(requestId4, DownloadStatusType.PAUSED);
+        
+        MultipleDownloadResponse response = responses.waitFor(requestId, 2000, TimeUnit.MILLISECONDS);
+        assertTrue(response != null);
+
+        assertStatus(requestId, DownloadStatusType.CANCELLED);
+        
+        instance.resume(requestId2);
+        response = responses.waitFor(requestId2);
+        assertTrue(response != null);
+        
+        DownloadResponse expResult = new DownloadResponse();
+        expResult.setRequestId(requestId2);
+        expResult.setRespondTo(RESPOND_TO);
+        expResult.setFrom(request.getFrom());
+        expResult.setData("Скачалось");
+        expResult.setLink(new URI("http://downloader.test.ru/inbox/dhts_zip"));
+
+        DownloadResponse result = response.getDownloadResponses().get(0);
+        assertEquals(expResult, result);
+        
+        assertStatus(requestId2, DownloadStatusType.FINISHED);
+    }
+    
     /**
      * Test of pause method, of class DownloadController.
      */
@@ -260,9 +339,9 @@ class WaitingForOutputStrategy implements OrchestratingResponseStrategy {
         try {
            for (DownloadResponse responsePart: response.getDownloadResponses()) {
                String requestId = responsePart.getRequestId();
+               requestIdResponses.put(requestId, response);
                Condition currentCondition = requestIdConditions.get(requestId);
                if (currentCondition != null) {
-                   requestIdResponses.put(requestId, response);
                    currentCondition.signal();
                }
            }
@@ -279,15 +358,20 @@ class WaitingForOutputStrategy implements OrchestratingResponseStrategy {
     }
     
     public MultipleDownloadResponse waitFor(String requestId) throws InterruptedException {
-        Condition currentCondition = responseLock.newCondition();
-        requestIdConditions.put(requestId, currentCondition);
-        responseLock.lock();
-        try {
-            currentCondition.await();
-            return requestIdResponses.remove(requestId);
+        if (!requestIdResponses.containsKey(requestId)) {
+            Condition currentCondition = responseLock.newCondition();
+            requestIdConditions.put(requestId, currentCondition);
+            responseLock.lock();
+            try {
+                currentCondition.await();
+                return requestIdResponses.remove(requestId);
+            }
+            finally {
+                responseLock.unlock();
+            }
         }
-        finally {
-            responseLock.unlock();
+        else {
+            return requestIdResponses.remove(requestId);
         }
     }
     

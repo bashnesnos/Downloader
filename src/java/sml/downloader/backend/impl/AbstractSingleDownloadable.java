@@ -98,7 +98,7 @@ public abstract class AbstractSingleDownloadable implements DownloadableCallable
     protected void onInterrupt(InterruptedException ie) {
         if (response.getDownloadResponses() != null) {
             for (DownloadResponse responsePart : response.getDownloadResponses()) {
-                responsePart.setCancelled(cancelled);
+                responsePart.setCancelled(true);
             }
         }
     }

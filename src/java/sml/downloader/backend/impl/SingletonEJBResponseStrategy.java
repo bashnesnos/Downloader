@@ -6,6 +6,8 @@
 
 package sml.downloader.backend.impl;
 
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -30,6 +32,11 @@ public class SingletonEJBResponseStrategy implements OrchestratingResponseStrate
     
     public final static String DEFAULT_PROTOCOL_KEY = "default";
     private final ConcurrentHashMap<String, ResponseStrategy> protocol2ResponseStrategy = new ConcurrentHashMap<>();
+    
+    @PostConstruct
+    void init() {
+        protocol2ResponseStrategy.put(DEFAULT_PROTOCOL_KEY, new SystemOutputResponseStrategy());
+    }
 
     public void registerStrategy(String protocol, ResponseStrategy strategy) {
         ResponseStrategy prev = protocol2ResponseStrategy.put(protocol, strategy);
@@ -38,10 +45,6 @@ public class SingletonEJBResponseStrategy implements OrchestratingResponseStrate
         }
     }
     
-    @PostConstruct
-    void init() {
-        protocol2ResponseStrategy.put(DEFAULT_PROTOCOL_KEY, new SystemOutputResponseStrategy());
-    }
     
     @Override
     public void sendResponse(MultipleDownloadResponse response) {
@@ -49,11 +52,11 @@ public class SingletonEJBResponseStrategy implements OrchestratingResponseStrate
             if (response.getDownloadResponses() != null && !response.getDownloadResponses().isEmpty()) {
                 for (DownloadResponse responsePart : response.getDownloadResponses()) {
                     if (responsePart != null) {
-                        URL respondTo = responsePart.getRespondTo();
+                        URI respondTo = responsePart.getRespondTo();
                         if (respondTo != null) {
-                            String protocol = respondTo.getProtocol();
-                            ResponseStrategy strategy = protocol2ResponseStrategy.get(protocol);
-                            
+                            //пока тупо один запрос к одному, что приведёт к ещё одной жирной мапе; нужно ещё разбивать
+                            ResponseStrategy strategy = protocol2ResponseStrategy.get(respondTo.toString());
+                                                        
                             if (strategy == null) {
                                 strategy = protocol2ResponseStrategy.get(DEFAULT_PROTOCOL_KEY);
                                 if (strategy == null) {
@@ -65,7 +68,7 @@ public class SingletonEJBResponseStrategy implements OrchestratingResponseStrate
                             try {
                                 strategy.sendResponse(responsePart);
                             } catch (UnsupportedProtocolExeption ex) {
-                                LOGGER.log(Level.SEVERE, "{0} стратегия не может обработать {1}; ответ уходит в логи {2};\n{3}", new Object[]{strategy.getClass(), protocol, responsePart, ex});
+                                LOGGER.log(Level.SEVERE, "{0} стратегия не может обработать {1}; ответ уходит в логи {2};\n{3}", new Object[]{strategy.getClass(), respondTo, responsePart, ex});
                             }
                         }
                         else {

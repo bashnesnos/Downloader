@@ -8,6 +8,7 @@ package sml.downloader;
 
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -98,8 +99,8 @@ public class DownloadManager {
     public List<URLAcknowledgement> submit(DownloadRequest request) throws RequestRejectedException {
         List<URLAcknowledgement> urlAcks = new ArrayList<>();
         
-        URL respondTo = request.getRespondTo();
-        for (URL from : request.getFrom()) {
+        URI respondTo = request.getRespondTo();
+        for (URI from : request.getFrom()) {
             URLAcknowledgement currentAck = new URLAcknowledgement();
             currentAck.setLink(from);
             String requestId = UUID.randomUUID().toString();

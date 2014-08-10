@@ -6,7 +6,7 @@
 
 package sml.downloader.backend.impl;
 
-import java.net.URL;
+import java.net.URI;
 import sml.downloader.backend.ResponseStrategy;
 import sml.downloader.exceptions.UnsupportedProtocolExeption;
 import sml.downloader.model.DownloadResponse;
@@ -18,7 +18,7 @@ import sml.downloader.model.DownloadResponse;
 public class SystemOutputResponseStrategy implements ResponseStrategy {
 
     @Override
-    public boolean canRespondTo(URL respondTo) {
+    public boolean canRespondTo(URI respondTo) {
         return true;
     }
 

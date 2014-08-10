@@ -13,6 +13,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.logging.Level;
@@ -72,12 +74,12 @@ public class StreamedTempFileDownloadStrategy implements DownloadStrategy {
         try {
             File tempFile = new File(tempDir, requestId);
             tempFile.createNewFile();
-            URL from = request.getFrom();
-            String fileName = from.getFile();
+            URI from = request.getFrom();
+            String fileName = from.toURL().getFile();
             File targetFile = new File(inboxDir, fileName.isEmpty() ? requestId : fileName.substring(1).replaceAll("\\p{Punct}", "_"));
-            URL to = new URL(externalInboxURL.getProtocol(), externalInboxURL.getHost(), externalInboxURL.getPort(), String.format("%s/%s", externalInboxURL.getPath(), targetFile.getName()));
+            URI to = new URL(externalInboxURL.getProtocol(), externalInboxURL.getHost(), externalInboxURL.getPort(), String.format("%s/%s", externalInboxURL.getPath(), targetFile.getName())).toURI();
             return new StreamedTempFilePausableDownloadCallable(requestId, request.getRespondTo(), from, to,  tempFile, targetFile);
-        } catch (IOException ex) {
+        } catch (IOException | URISyntaxException ex) {
             throw new RuntimeException(ex);
         }
     }
@@ -89,13 +91,13 @@ public class StreamedTempFileDownloadStrategy implements DownloadStrategy {
         private final OutputStream out;
         private final File tempFile;
         private final File targetFile;
-        private final URL to;
+        private final URI to;
         
         private final DownloadResponse singleResponse;
         
         public static final int BUFFER_SIZE = 8192;
                 
-        public StreamedTempFilePausableDownloadCallable(String requestId, URL respondTo, URL from, URL to, File tempFile, File targetFile) {
+        public StreamedTempFilePausableDownloadCallable(String requestId, URI respondTo, URI from, URI to, File tempFile, File targetFile) {
             super(requestId);
             singleResponse = new DownloadResponse();
             singleResponse.setRequestId(requestId);
@@ -103,7 +105,7 @@ public class StreamedTempFileDownloadStrategy implements DownloadStrategy {
             singleResponse.setFrom(from);
             response.setDownloadResponses(Collections.singletonList(singleResponse));
             try {
-                this.in = from.openStream();
+                this.in = from.toURL().openStream();
                 this.tempFile = tempFile;
                 this.targetFile = targetFile;
                 this.out = new FileOutputStream(tempFile);

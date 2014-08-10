@@ -6,7 +6,7 @@
 
 package sml.downloader.model.internal;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.Objects;
 
 /**
@@ -16,10 +16,10 @@ import java.util.Objects;
  */
 public class InternalDownloadRequest {
     private final String requestId;
-    private final URL from;
-    private final URL respondTo;
+    private final URI from;
+    private final URI respondTo;
     
-    public InternalDownloadRequest(String requestId, URL from, URL respondTo) {
+    public InternalDownloadRequest(String requestId, URI from, URI respondTo) {
         this.requestId = requestId;
         this.from = from;
         this.respondTo = respondTo;
@@ -29,11 +29,11 @@ public class InternalDownloadRequest {
         return requestId;
     }
 
-    public URL getFrom() {
+    public URI getFrom() {
         return from;
     }
 
-    public URL getRespondTo() {
+    public URI getRespondTo() {
         return respondTo;
     }
 

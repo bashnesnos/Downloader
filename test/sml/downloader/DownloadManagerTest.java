@@ -2,6 +2,8 @@
 package sml.downloader;
 
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
@@ -25,7 +27,7 @@ public class DownloadManagerTest {
     private static DownloadManager instance;
     private static EJBContainer container;
     
-    private final URL RESPOND_TO;
+    private final URI RESPOND_TO;
     
     @BeforeClass
     public static void init() throws NamingException {
@@ -38,8 +40,8 @@ public class DownloadManagerTest {
         container.close();
     }
 
-    public DownloadManagerTest() throws MalformedURLException {
-        this.RESPOND_TO = new URL("http://lopata.com/inbox");
+    public DownloadManagerTest() throws MalformedURLException, URISyntaxException {
+        this.RESPOND_TO = new URI("http://lopata.com/inbox");
     }
     /**
      * Test of submit method, of class DownloadManager.
@@ -49,7 +51,7 @@ public class DownloadManagerTest {
         System.out.println("submit");
         DownloadRequest request = new DownloadRequest();
         request.setRespondTo(RESPOND_TO);
-        request.setFrom(Collections.singletonList(new URL("http://localhost:9080/dhts.zip")));
+        request.setFrom(Collections.singletonList(new URI("http://localhost:9080/dhts.zip")));
         
         List<URLAcknowledgement> result = instance.submit(request);
         assertTrue(result != null);        
@@ -74,7 +76,7 @@ public class DownloadManagerTest {
         System.out.println("cancel");
         DownloadRequest request = new DownloadRequest();
         request.setRespondTo(RESPOND_TO);
-        request.setFrom(Collections.singletonList(new URL("http://localhost:9080/dhts.zip")));
+        request.setFrom(Collections.singletonList(new URI("http://localhost:9080/dhts.zip")));
         
         List<URLAcknowledgement> result = instance.submit(request);
         assertTrue(result != null);        
@@ -98,7 +100,7 @@ public class DownloadManagerTest {
         System.out.println("pause & resume");
         DownloadRequest request = new DownloadRequest();
         request.setRespondTo(RESPOND_TO);
-        request.setFrom(Collections.singletonList(new URL("http://localhost:9080/dhts.zip")));
+        request.setFrom(Collections.singletonList(new URI("http://localhost:9080/dhts.zip")));
         
         List<URLAcknowledgement> result = instance.submit(request);
         assertTrue(result != null);        
@@ -128,7 +130,7 @@ public class DownloadManagerTest {
         System.out.println("pause & cancel");
         DownloadRequest request = new DownloadRequest();
         request.setRespondTo(RESPOND_TO);
-        request.setFrom(Collections.singletonList(new URL("http://localhost:9080/dhts.zip")));
+        request.setFrom(Collections.singletonList(new URI("http://localhost:9080/dhts.zip")));
         
         List<URLAcknowledgement> result = instance.submit(request);
         assertTrue(result != null);        

@@ -3,9 +3,9 @@ package sml.downloader.backend;
 
 import sml.downloader.backend.impl.InMemoryQueuingStrategy;
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import static org.junit.Assert.*;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import sml.downloader.model.internal.InternalDownloadRequest;
 
@@ -20,9 +20,9 @@ public class InMemoryQueuingStrategyTest {
      * Test of offer method, of class InMemoryQueuingStrategy.
      */
     @Test
-    public void testOffer() throws MalformedURLException {
+    public void testOffer() throws MalformedURLException, URISyntaxException {
         System.out.println("offer");
-        InternalDownloadRequest e = new InternalDownloadRequest("test", new URL("http://lopata.com/"), null);
+        InternalDownloadRequest e = new InternalDownloadRequest("test", new URI("http://lopata.com/"), null);
         InMemoryQueuingStrategy instance = new InMemoryQueuingStrategy(2);
         
         boolean result = instance.offer(e);
@@ -38,9 +38,9 @@ public class InMemoryQueuingStrategyTest {
      * Test of poll method, of class InMemoryQueuingStrategy.
      */
     @Test
-    public void testPoll() throws MalformedURLException {
+    public void testPoll() throws MalformedURLException, URISyntaxException {
         System.out.println("poll");
-        InternalDownloadRequest e = new InternalDownloadRequest("test", new URL("http://lopata.com/"), null);
+        InternalDownloadRequest e = new InternalDownloadRequest("test", new URI("http://lopata.com/"), null);
         InMemoryQueuingStrategy instance = new InMemoryQueuingStrategy(2);
         
         instance.offer(e);

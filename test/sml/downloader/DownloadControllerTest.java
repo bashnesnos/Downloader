@@ -3,6 +3,8 @@ package sml.downloader;
 
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -36,9 +38,10 @@ import sml.downloader.model.internal.InternalDownloadRequest;
 public class DownloadControllerTest {
     private final DownloadController instance;
     private final WaitingForOutputStrategy responses;
-    private final URL RESPOND_TO = new URL("http://lopata.com/inbox");
+    private final URI RESPOND_TO;
     
-    public DownloadControllerTest() throws MalformedURLException {
+    public DownloadControllerTest() throws MalformedURLException, URISyntaxException {
+        this.RESPOND_TO = new URI("http://lopata.com/inbox");
         int queueSize = 5;
         int parallelDownloads = 3; //чтобы было меньше чем очередь
         InMemoryQueuingStrategy queue = new InMemoryQueuingStrategy(queueSize);
@@ -80,7 +83,7 @@ public class DownloadControllerTest {
     public void testEnqueue() throws Exception {
         System.out.println("enqueue");
         String requestId = "test_http";
-        URL from = new URL("http://localhost:9080/dhts.zip");
+        URI from = new URI("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -93,7 +96,7 @@ public class DownloadControllerTest {
         expResult.setRespondTo(RESPOND_TO);
         expResult.setFrom(request.getFrom());
         expResult.setData("Скачалось");
-        expResult.setLink(new URL("http://downloader.test.ru/inbox/dhts_zip"));
+        expResult.setLink(new URI("http://downloader.test.ru/inbox/dhts_zip"));
 
         DownloadResponse result = response.getDownloadResponses().get(0);
         assertEquals(expResult, result);
@@ -104,10 +107,10 @@ public class DownloadControllerTest {
      * Test of status method, of class DownloadController.
      */
     @Test
-    public void testFinishedStatus() throws MalformedURLException, IllegalDownloadStatusTransitionException, InterruptedException {
+    public void testFinishedStatus() throws MalformedURLException, IllegalDownloadStatusTransitionException, InterruptedException, URISyntaxException {
         System.out.println("FINISHED status");
         String requestId = "test_http";
-        URL from = new URL("http://localhost:9080/dhts.zip");
+        URI from = new URI("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -120,7 +123,7 @@ public class DownloadControllerTest {
         expResult.setRespondTo(RESPOND_TO);
         expResult.setFrom(request.getFrom());
         expResult.setData("Скачалось");
-        expResult.setLink(new URL("http://downloader.test.ru/inbox/dhts_zip"));
+        expResult.setLink(new URI("http://downloader.test.ru/inbox/dhts_zip"));
 
         DownloadResponse result = response.getDownloadResponses().get(0);
         assertEquals(expResult, result);
@@ -137,7 +140,7 @@ public class DownloadControllerTest {
     public void testCancel() throws Exception {
         System.out.println("cancel");
         String requestId = "test_http_cancel";
-        URL from = new URL("http://localhost:9080/dhts.zip");
+        URI from = new URI("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -169,7 +172,7 @@ public class DownloadControllerTest {
     public void testPauseResume() throws Exception {
         System.out.println("pause & resume");
         String requestId = "test_http_pause_resume";
-        URL from = new URL("http://localhost:9080/dhts.zip");
+        URI from = new URI("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -192,7 +195,7 @@ public class DownloadControllerTest {
         expResult.setRespondTo(RESPOND_TO);
         expResult.setFrom(request.getFrom());
         expResult.setData("Скачалось");
-        expResult.setLink(new URL("http://downloader.test.ru/inbox/dhts_zip"));
+        expResult.setLink(new URI("http://downloader.test.ru/inbox/dhts_zip"));
 
         DownloadResponse result = response.getDownloadResponses().get(0);
         assertEquals(expResult, result);
@@ -209,7 +212,7 @@ public class DownloadControllerTest {
     public void testPauseCancel() throws Exception {
         System.out.println("pause & cancel");
         String requestId = "test_http_pause_cancel";
-        URL from = new URL("http://localhost:9080/dhts.zip");
+        URI from = new URI("http://localhost:9080/dhts.zip");
         InternalDownloadRequest request = new InternalDownloadRequest(requestId
                 , from
                 , RESPOND_TO);
@@ -299,5 +302,10 @@ class WaitingForOutputStrategy implements OrchestratingResponseStrategy {
         finally {
             responseLock.unlock();
         }
+    }
+
+    @Override
+    public void registerStrategy(String protocol, ResponseStrategy strategy) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }

@@ -6,12 +6,18 @@
 
 package sml.downloader.model;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
+
 
 /**
  * Для внешних, JAXB там ещё что прикручивать
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
+@XmlRootElement(name = "status")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class DownloadStatus {
     private String requestId;
     private DownloadStatusType status;

@@ -1,9 +1,12 @@
 package sml.downloader.backend.impl;
 
 
+import java.net.MalformedURLException;
 import sml.downloader.backend.impl.AbstractDownloadsPerThreadStrategy;
 import sml.downloader.backend.impl.DonwloadableFutureImpl;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import sml.downloader.backend.DownloadStrategy;
 import sml.downloader.backend.DownloadableFuture;
 import sml.downloader.exceptions.UnsupportedProtocolExeption;
@@ -31,21 +34,25 @@ public class One2OneDownloadsPerThreadStrategy extends AbstractDownloadsPerThrea
     @Override
     public DownloadableFuture<MultipleDownloadResponse> getDownloadFuture(InternalDownloadRequest... requests) throws UnsupportedProtocolExeption {
         if (requests.length == 1) {
-            InternalDownloadRequest request = requests[0];
-            if (request.getRequestId() == null) {
-                throw new IllegalStateException("У запроса уже должен быть айдишник в этот момент");
-            }
-
-            //по URL из запроса определяем как скачивать
-            String protocol = request.getFrom().getProtocol();
-
-            if (protocol2DownloadStrategyMap.containsKey(protocol)) {
-                DownloadStrategy downloadStrategy = protocol2DownloadStrategyMap.get(protocol);
-                DownloadableFuture<MultipleDownloadResponse> future  = new DonwloadableFutureImpl(downloadStrategy.getDownloadCallable(request));
-                return future;
-            }
-            else {
-                throw new UnsupportedProtocolExeption(protocol);
+            try {
+                InternalDownloadRequest request = requests[0];
+                if (request.getRequestId() == null) {
+                    throw new IllegalStateException("У запроса уже должен быть айдишник в этот момент");
+                }
+                
+                //по URL из запроса определяем как скачивать; не очень похоже пока на что-то умное, но для http хватит
+                String protocol = request.getFrom().toURL().getProtocol();
+                
+                if (protocol2DownloadStrategyMap.containsKey(protocol)) {
+                    DownloadStrategy downloadStrategy = protocol2DownloadStrategyMap.get(protocol);
+                    DownloadableFuture<MultipleDownloadResponse> future  = new DonwloadableFutureImpl(downloadStrategy.getDownloadCallable(request));
+                    return future;
+                }
+                else {
+                    throw new UnsupportedProtocolExeption(protocol);
+                }
+            } catch (MalformedURLException ex) {
+                throw new RuntimeException(ex);
             }
         }
         else {

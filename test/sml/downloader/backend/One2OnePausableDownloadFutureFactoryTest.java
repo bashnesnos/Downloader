@@ -5,6 +5,7 @@ import sml.downloader.backend.impl.StreamedTempFileDownloadStrategy;
 import sml.downloader.backend.impl.One2OneDownloadsPerThreadStrategy;
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,7 +63,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         System.out.println("getHttp");
 
         String requestId = "test_http";
-        URL from = new URL("http://localhost:9080/dhts.zip");
+        URI from = new URI("http://localhost:9080/dhts.zip");
         InternalDownloadRequest[] requests = { new InternalDownloadRequest(requestId
                 , from
                 , null) };
@@ -74,7 +75,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         expResult.setRequestId(requestId);
         expResult.setFrom(from);
         expResult.setData("Скачалось");
-        expResult.setLink(new URL("http://downloader.test.ru/inbox/dhts_zip"));
+        expResult.setLink(new URI("http://downloader.test.ru/inbox/dhts_zip"));
 
         downloadThread.execute(future);
         
@@ -87,7 +88,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         System.out.println("getHttp");
 
         String requestId = "test_http";
-        URL from = new URL("http://localhost:9080/dhts.zip");
+        URI from = new URI("http://localhost:9080/dhts.zip");
         InternalDownloadRequest[] requests = { new InternalDownloadRequest(requestId
                 , from
                 , null) };
@@ -99,7 +100,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         expResult.setRequestId(requestId);
         expResult.setFrom(from);
         expResult.setData("Скачалось");
-        expResult.setLink(new URL("http://downloader.test.ru/inbox/dhts_zip"));
+        expResult.setLink(new URI("http://downloader.test.ru/inbox/dhts_zip"));
 
         downloadThread.execute(future);
 
@@ -119,7 +120,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         System.out.println("getHttp");
 
         String requestId = "test_http_cancel";
-        URL from = new URL("http://localhost:9080/dhts.zip");
+        URI from = new URI("http://localhost:9080/dhts.zip");
         InternalDownloadRequest[] requests = { new InternalDownloadRequest(requestId
                 , from
                 , null) };
@@ -154,7 +155,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         System.out.println("getFile");
 
         String requestId = "test_file";
-        URL from = new File("C:\\Users\\asemelit\\trash\\undelete2\\Documents\\Books\\Multitherading\\Maurice Herlihy, Nir Shavit - The Art of Multiprocessor Programming - 2008.pdf").toURI().toURL();
+        URI from = new File("C:\\Users\\asemelit\\trash\\undelete2\\Documents\\Books\\Multitherading\\Maurice Herlihy, Nir Shavit - The Art of Multiprocessor Programming - 2008.pdf").toURI();
         InternalDownloadRequest[] requests = { new InternalDownloadRequest(requestId
                 , from
                 , null) };
@@ -166,7 +167,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
         expResult.setRequestId(requestId);
         expResult.setFrom(from);
         expResult.setData("Скачалось");
-        expResult.setLink(new URL("http://downloader.test.ru/inbox/C__Users_asemelit_trash_undelete2_Documents_Books_Multitherading_Maurice_20Herlihy__20Nir_20Shavit_20__20The_20Art_20of_20Multiprocessor_20Programming_20__202008_pdf"));
+        expResult.setLink(new URI("http://downloader.test.ru/inbox/C__Users_asemelit_trash_undelete2_Documents_Books_Multitherading_Maurice_20Herlihy__20Nir_20Shavit_20__20The_20Art_20of_20Multiprocessor_20Programming_20__202008_pdf"));
 
         downloadThread.execute(future);
         

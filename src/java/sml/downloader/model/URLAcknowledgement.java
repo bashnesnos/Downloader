@@ -6,15 +6,21 @@
 
 package sml.downloader.model;
 
+import java.net.URI;
 import java.net.URL;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
+@XmlRootElement(name = "urlAck")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class URLAcknowledgement {
     private String requestId;
-    private URL link;
+    private URI link;
     private AcknowledgementStatus status;
     private String reason;
 
@@ -26,11 +32,11 @@ public class URLAcknowledgement {
         this.requestId = requestId;
     }
     
-    public URL getLink() {
+    public URI getLink() {
         return link;
     }
 
-    public void setLink(URL link) {
+    public void setLink(URI link) {
         this.link = link;
     }
 

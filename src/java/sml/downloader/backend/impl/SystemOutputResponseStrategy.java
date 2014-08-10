@@ -6,17 +6,24 @@
 
 package sml.downloader.backend.impl;
 
+import java.net.URL;
 import sml.downloader.backend.ResponseStrategy;
-import sml.downloader.model.MultipleDownloadResponse;
+import sml.downloader.exceptions.UnsupportedProtocolExeption;
+import sml.downloader.model.DownloadResponse;
 
 /**
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public class SystemOutputResponseStrategy implements ResponseStrategy{
+public class SystemOutputResponseStrategy implements ResponseStrategy {
 
     @Override
-    public void sendResponse(MultipleDownloadResponse response) {
+    public boolean canRespondTo(URL respondTo) {
+        return true;
+    }
+
+    @Override
+    public void sendResponse(DownloadResponse response) throws UnsupportedProtocolExeption {
         System.out.println(response);
     }
 

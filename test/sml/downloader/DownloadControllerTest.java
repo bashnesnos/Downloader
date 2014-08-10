@@ -15,6 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.junit.Assert.*;
 import org.junit.Test;
 import sml.downloader.backend.DownloadStrategy;
+import sml.downloader.backend.OrchestratingResponseStrategy;
 import sml.downloader.backend.ResponseStrategy;
 import sml.downloader.backend.impl.InMemoryCompleteQueuingStrategy;
 import sml.downloader.backend.impl.InMemoryDownloadStatusStrategy;
@@ -244,7 +245,7 @@ public class DownloadControllerTest {
     
 }
 
-class WaitingForOutputStrategy implements ResponseStrategy {
+class WaitingForOutputStrategy implements OrchestratingResponseStrategy {
     private final Lock responseLock = new ReentrantLock();
     private final ConcurrentHashMap<String, Condition> requestIdConditions = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, MultipleDownloadResponse> requestIdResponses = new ConcurrentHashMap<>();

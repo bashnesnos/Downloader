@@ -24,7 +24,7 @@ import javax.ejb.EJB;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import sml.downloader.backend.DownloadStrategy;
-import sml.downloader.backend.ResponseStrategy;
+import sml.downloader.backend.OrchestratingResponseStrategy;
 import sml.downloader.backend.impl.InMemoryCompleteQueuingStrategy;
 import sml.downloader.backend.impl.InMemoryDownloadStatusStrategy;
 import sml.downloader.backend.impl.InMemoryQueuingStrategy;
@@ -53,7 +53,7 @@ public class DownloadManager {
     private DownloadController controller;
     
     @EJB(beanName = "replier")
-    private ResponseStrategy replier;
+    private OrchestratingResponseStrategy replier;
     
     @PostConstruct
     void init() {

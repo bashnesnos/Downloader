@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 import sml.downloader.backend.CompleteQueuingStrategy;
 import sml.downloader.backend.DownloadableFuture;
 import sml.downloader.backend.DownloadsPerThreadStrategy;
-import sml.downloader.backend.ResponseStrategy;
+import sml.downloader.backend.OrchestratingResponseStrategy;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.exceptions.UnsupportedProtocolExeption;
 import sml.downloader.model.DownloadResponse;
@@ -43,7 +43,7 @@ public class DownloadDispatcher extends Thread {
     private final CompleteQueuingStrategy downloadQueue;
     private final DelegateFuture[] downloadFutures;
     private final DownloadsPerThreadStrategy downloadsPerThreadStrategy;
-    private final ResponseStrategy responseStrategy;
+    private final OrchestratingResponseStrategy responseStrategy;
     private final int parallelDownloads;
     private final int downloadsPerThread;
     private final ExecutorService downloadWorkers;
@@ -55,7 +55,7 @@ public class DownloadDispatcher extends Thread {
     private final ConcurrentHashMap<String, DownloadStatusType> pendingCPR = new ConcurrentHashMap<>(1 << 8);
     
     public DownloadDispatcher(CompleteQueuingStrategy downloadQueue
-            , ResponseStrategy responseStrategy
+            , OrchestratingResponseStrategy responseStrategy
             , DownloadsPerThreadStrategy downloadsPerThreadStrategy
             , int parallelDownloads) {
         this.parallelDownloads = parallelDownloads;

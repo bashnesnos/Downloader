@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 import sml.downloader.backend.CompleteQueuingStrategy;
 import sml.downloader.backend.DownloadsPerThreadStrategy;
-import sml.downloader.backend.ResponseStrategy;
+import sml.downloader.backend.OrchestratingResponseStrategy;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.model.DownloadStatus;
 import sml.downloader.model.internal.InternalDownloadRequest;
@@ -28,7 +28,7 @@ public class DownloadController {
     private final DownloadDispatcher dispatcher;
     private final AtomicBoolean dispatchingStarted = new AtomicBoolean(false);
     public  DownloadController( CompleteQueuingStrategy downloadQueue
-            , ResponseStrategy responseStrategy
+            , OrchestratingResponseStrategy responseStrategy
             , DownloadsPerThreadStrategy downloadsPerThreadStrategy
             , int parallelDownloads) {
         this.downloadQueue = downloadQueue;

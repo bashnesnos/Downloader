@@ -100,20 +100,25 @@ public class DownloadDispatcher extends Thread {
                 int i = 0;
                 int shift = 0;
                 while (!isInterrupted() && i < cursor) { //проверяем текущие закачки, включая только что добавленные
-                    DownloadableFuture<MultipleDownloadResponse> currentFuture = downloadFutures[i];
-                    if (currentFuture.isDone() || tryCancelPauseResume(currentFuture)) {
+                    DelegateFuture currentDelegate = downloadFutures[i];
+                    
+                    if (currentDelegate.getDelegate() == null) {
+                        LOGGER.log(Level.SEVERE, "Race condition каким образом мы попали в дырку? i: {0}; shift: {1}; cursor: {2}", new Object[]{i, shift, cursor});
+                        shift++;
+                    }
+                    else if (currentDelegate.isDone() || tryCancelPauseResume(currentDelegate)) {
                         
-                        if (currentFuture.isDone()) {
+                        if (currentDelegate.isDone()) {
                             try {
                                 //нужно отправить ответ, и взять ещё закачку
-                                sendResponse(currentFuture.get(), false);
+                                sendResponse(currentDelegate.get(), false);
                             } catch (ExecutionException ex) {
                                 LOGGER.log(Level.SEVERE, "Неожиданная ошибка, по идее уже всё завершилось так или иначе", ex);
                             }
                             finally {
                                 downloadFutures[i].setDelegate(null); //освобождаем место
                             }
-                        } else if (!currentFuture.hasActive()) {
+                        } else if (!currentDelegate.hasActive()) {
                             //нужно отправить в место ожидания
                             try {
                                 pausedFutures.add(downloadFutures[i].getDelegate());
@@ -130,7 +135,7 @@ public class DownloadDispatcher extends Thread {
                     }
                     else { //ещё работает
                         if (shift > 0) {
-                            downloadFutures[i - shift].setDelegate(currentFuture); //дефрагментируем
+                            downloadFutures[i - shift].setDelegate(currentDelegate.getDelegate()); //дефрагментируем
                             downloadFutures[i].setDelegate(null);
                         }
                     }

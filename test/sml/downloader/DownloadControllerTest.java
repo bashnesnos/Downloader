@@ -18,6 +18,7 @@ import org.junit.Test;
 import sml.downloader.backend.DownloadStrategy;
 import sml.downloader.backend.Downloadable;
 import sml.downloader.backend.ResponseStrategy;
+import sml.downloader.backend.impl.InMemoryCompleteQueuingStrategy;
 import sml.downloader.backend.impl.InMemoryDownloadStatusStrategy;
 import sml.downloader.backend.impl.InMemoryQueuingStrategy;
 import sml.downloader.backend.impl.One2OneDownloadsPerThreadStrategy;
@@ -45,6 +46,7 @@ public class DownloadControllerTest {
         int parallelDownloads = 3; //чтобы было меньше чем очередь
         InMemoryQueuingStrategy queue = new InMemoryQueuingStrategy(queueSize);
         InMemoryDownloadStatusStrategy downloadStatuses = new InMemoryDownloadStatusStrategy(queueSize);
+        InMemoryCompleteQueuingStrategy completeQueue = new InMemoryCompleteQueuingStrategy(downloadStatuses, queue);
         this.responses = new WaitingForOutputStrategy();
         
         File tempDir = new File("C:\\downloader\\temp");
@@ -65,8 +67,7 @@ public class DownloadControllerTest {
         
         One2OneDownloadsPerThreadStrategy downloadsPerThreadStrategy = new One2OneDownloadsPerThreadStrategy(protocol2DownloadStrategyMap);
         
-        this.instance = new DownloadController(queue
-                , downloadStatuses
+        this.instance = new DownloadController(completeQueue
                 , responses
                 , downloadsPerThreadStrategy
                 , parallelDownloads);

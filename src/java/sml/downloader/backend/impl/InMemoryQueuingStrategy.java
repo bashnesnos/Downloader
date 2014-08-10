@@ -17,7 +17,7 @@ import sml.downloader.model.internal.InternalDownloadRequest;
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public class InMemoryQueuingStrategy extends QueuingStrategy<InternalDownloadRequest> {
+public class InMemoryQueuingStrategy implements QueuingStrategy {
     private final static Logger LOGGER = Logger.getLogger(InMemoryQueuingStrategy.class.getName());
     
     private final ArrayBlockingQueue<InternalDownloadRequest> downloadQueue; //преимущество в том, что оно ограниченного размера из коробки; блокирующие операции не сильно важны
@@ -51,12 +51,6 @@ public class InMemoryQueuingStrategy extends QueuingStrategy<InternalDownloadReq
     @Override
     public InternalDownloadRequest poll() {
         return downloadQueue.poll();
-    }
-
-    //Это будет жутко медленно, но на всякий случай если отменных закачек в очереди слишком много - то можно
-    @Override
-    public boolean remove(Object o) {
-        return downloadQueue.remove(o);
     }
 
     @Override

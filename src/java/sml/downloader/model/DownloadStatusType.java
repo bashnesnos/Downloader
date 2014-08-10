@@ -27,7 +27,7 @@ public enum DownloadStatusType {
             }
         }
     },
-    PAUSED {
+    PAUSED { //виртуальный в том смысле, что клиенту на данный момент не виден
         @Override
         public boolean isTransitionAllowedFrom(DownloadStatusType prevStatus) {
             if (prevStatus == null) {
@@ -35,13 +35,28 @@ public enum DownloadStatusType {
             }
             
             switch(prevStatus) {
-                case IN_PROGRESS:
+                case IN_PROGRESS: case RESUMING:
                     return true;
                 default:
                     return false;
             }
         }
     },    
+    RESUMING { //виртуальный в том смысле, что клиенту на данный момент не виден
+        @Override
+        public boolean isTransitionAllowedFrom(DownloadStatusType prevStatus) {
+            if (prevStatus == null) {
+                return false;
+            }
+            
+            switch(prevStatus) {
+                case PAUSED:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    },     
     FINISHED {
         @Override
         public boolean isTransitionAllowedFrom(DownloadStatusType prevStatus) {
@@ -65,7 +80,7 @@ public enum DownloadStatusType {
             }
             
             switch(prevStatus) {
-                case PENDING: case IN_PROGRESS: case PAUSED:
+                case PENDING: case IN_PROGRESS: case PAUSED: case RESUMING:
                     return true;
                 default:
                     return false;

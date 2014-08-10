@@ -35,11 +35,11 @@ public class InMemoryDownloadStatusStrategy implements DownloadStatusStrategy {
     }
 
     @Override
-    public void addStatus(String requestId, InternalDownloadStatus newStatus) throws IllegalDownloadStatusTransitionException, DownloadIdCollisionException {
+    public void updateStatus(String requestId, InternalDownloadStatus newStatus) throws IllegalDownloadStatusTransitionException, DownloadIdCollisionException {
         //это больше downloadId конечно
         DownloadStatusType newStatusType = newStatus.getStatus();
         URL newURL = newStatus.getLink();
-        synchronized(newURL) { //чтобы никто другой именно эту URL не обновил пока мы проверяем
+        //synchronized(newURL) { //в общем-то, этот метод для одного и того же запроса вызывается в один поток - либо при начальной вставке; либо при переводе статуса диспетчером
             InternalDownloadStatus currentStatus = requestStatuses.get(requestId);
             if (currentStatus == null) {
                 if (newStatusType.isTransitionAllowedFrom(null)) {
@@ -73,7 +73,7 @@ public class InMemoryDownloadStatusStrategy implements DownloadStatusStrategy {
                     }
                 }
             }
-        }
+        //}
         
     }
 
@@ -115,6 +115,11 @@ public class InMemoryDownloadStatusStrategy implements DownloadStatusStrategy {
             DownloadStatusType currentStatusType = currentStatus.getStatus();
             return newStatusType.isTransitionAllowedFrom(currentStatusType);
         }
+    }
+
+    @Override
+    public InternalDownloadStatus removeStatus(String requestId) {
+        return requestStatuses.remove(requestId);
     }
 
 }

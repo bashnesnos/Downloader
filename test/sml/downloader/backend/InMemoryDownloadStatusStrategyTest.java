@@ -27,7 +27,7 @@ public class InMemoryDownloadStatusStrategyTest {
         String requestId = "test";
         InternalDownloadStatus status = new InternalDownloadStatus(new URL("http://lopata.com/"), DownloadStatusType.PENDING);
         InMemoryDownloadStatusStrategy instance = new InMemoryDownloadStatusStrategy(2);
-        instance.addStatus(requestId, status);
+        instance.updateStatus(requestId, status);
         DownloadStatus extStatus = instance.getStatus(requestId);
         
         assertTrue(extStatus != null);
@@ -40,7 +40,7 @@ public class InMemoryDownloadStatusStrategyTest {
         String requestId = "test";
         InternalDownloadStatus status = new InternalDownloadStatus(new URL("http://lopata.com/"), DownloadStatusType.PENDING);
         InMemoryDownloadStatusStrategy instance = new InMemoryDownloadStatusStrategy(2);
-        instance.addStatus(requestId, status);
+        instance.updateStatus(requestId, status);
 
         boolean result = instance.isTransitionAllowed(requestId, status);
         assertFalse(result);
@@ -54,16 +54,16 @@ public class InMemoryDownloadStatusStrategyTest {
         InternalDownloadStatus pendingStatus = new InternalDownloadStatus(lopataURL, DownloadStatusType.PENDING);
         InMemoryDownloadStatusStrategy instance = new InMemoryDownloadStatusStrategy(2);
 
-        instance.addStatus(requestId, pendingStatus);
+        instance.updateStatus(requestId, pendingStatus);
             InternalDownloadStatus inProgressStatus = new InternalDownloadStatus(lopataURL, DownloadStatusType.IN_PROGRESS);
             assertTrue(instance.isTransitionAllowed(requestId, inProgressStatus));
             InternalDownloadStatus cancelledStatus = new InternalDownloadStatus(lopataURL, DownloadStatusType.CANCELLED);
             assertTrue(instance.isTransitionAllowed(requestId, cancelledStatus));
-        instance.addStatus(requestId, inProgressStatus);
+        instance.updateStatus(requestId, inProgressStatus);
             assertTrue(instance.isTransitionAllowed(requestId, cancelledStatus));
             InternalDownloadStatus finishedStatus = new InternalDownloadStatus(lopataURL, DownloadStatusType.FINISHED);
             assertTrue(instance.isTransitionAllowed(requestId, finishedStatus));
-        instance.addStatus(requestId, finishedStatus);
+        instance.updateStatus(requestId, finishedStatus);
     }
  
     

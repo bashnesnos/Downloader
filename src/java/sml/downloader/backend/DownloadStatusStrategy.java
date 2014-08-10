@@ -11,7 +11,8 @@ import sml.downloader.model.internal.InternalDownloadStatus;
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
 public interface DownloadStatusStrategy {
-    void addStatus(String requestId, InternalDownloadStatus status) throws IllegalDownloadStatusTransitionException, DownloadIdCollisionException;
+    void updateStatus(String requestId, InternalDownloadStatus status) throws IllegalDownloadStatusTransitionException, DownloadIdCollisionException;
+    InternalDownloadStatus removeStatus(String requestId);
     boolean isTransitionAllowed(String requestId, InternalDownloadStatus status) throws DownloadIdCollisionException;
     DownloadStatus getStatus(String requestId);
 }

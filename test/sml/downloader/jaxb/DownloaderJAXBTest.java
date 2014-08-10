@@ -80,7 +80,7 @@ public class DownloaderJAXBTest {
         
         String result = encoder.encode(response);
         System.out.println(result);
-        assertEquals("<statuses><status><requestId>first</requestId><status>FINISHED</status></status><status><requestId>second</requestId><status>CANCELLED</status></status></statuses>"
+        assertEquals("<statuses><downloadStatus><requestId>first</requestId><status>FINISHED</status></downloadStatus><downloadStatus><requestId>second</requestId><status>CANCELLED</status></downloadStatus></statuses>"
         , result);
     }    
     

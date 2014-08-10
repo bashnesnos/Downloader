@@ -7,7 +7,6 @@
 package sml.downloader.web;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -16,10 +15,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.ejb.DependsOn;
 import javax.ejb.EJB;
-import javax.ejb.Stateless;
-import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.websocket.EncodeException;
@@ -64,18 +60,17 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
 
     private RemoteEndpoint.Async asyncRemote;
     private URI respondTo;
-    private URL serverUrl;
     
     @OnOpen
     public void open(Session session, EndpointConfig conf) { 
         try {
             if (downloader == null) {
-                LOGGER.log(Level.SEVERE, "donwloader то <null>");
+                LOGGER.log(Level.SEVERE, "donwloader ведь <null>");
                 downloader = (DownloadManager) InitialContext.doLookup("java:global/Downloader/downloader");
             }
 
             if (replier == null) {
-                LOGGER.log(Level.SEVERE, "replier то <null>");
+                LOGGER.log(Level.SEVERE, "replier ведь <null>");
                 replier = (OrchestratingResponseStrategy) InitialContext.doLookup("java:global/Downloader/replier");
             }
         } catch (NamingException ex) {
@@ -97,6 +92,8 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
     
     @OnMessage
     public void onRequest(Session session, Request request) {
+        LOGGER.log(Level.INFO, "Запрос: \n{0}", request);
+        
         AcknowledgementResponse ackResponse = new AcknowledgementResponse();
         Object response = ackResponse;
         

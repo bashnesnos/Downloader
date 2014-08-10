@@ -51,6 +51,10 @@ public class DownloadRequest implements Request {
         hash = 17 * hash + Objects.hashCode(this.respondTo);
         return hash;
     }
-    
+
+    @Override
+    public String toString() {
+        return "DownloadRequest{" + "from=" + from + ", respondTo=" + respondTo + '}';
+    }
     
 }

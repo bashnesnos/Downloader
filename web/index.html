@@ -17,17 +17,57 @@
                     </tr>
                 </thead>
             </table>
+            <div id="statuses"></div>
         </div>
         <br/>
         <div style="margin-left: 33.33%;  width: 33.33%">
             <input type="text" id="url_from" />
             <button id="download">Скачать</button>
-            <div id="statuses"></div>
         </div>
 
         <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
         <script type="text/javascript">
             var downloaderSocket = new WebSocket("ws://localhost:8080/Downloader/downloader-ws");
+
+            var sendDownloadRequest = function(url) {
+                downloaderSocket.send("<download><from>" + url + "</from></download>");   
+            };
+            
+            var sendTouchRequest = function(type, requestId) {
+                downloaderSocket.send("<touch><type>" + type + "</type><requestId>" + requestId + "</requestId></touch>");
+            };
+            
+            var controlButtonHandler = function() {
+                var $button = $(this);
+                var buttonId = $button.attr('id');
+                var parentRow = $button.parent().parent();
+                var requestId = parentRow.attr('id');
+                var currentURL = $(parentRow.children('td')[0]).html();                
+                
+                console.log(buttonId + ": " + requestId + "; " + currentURL);
+                if (buttonId === 'status') {
+                    sendTouchRequest(buttonId.toUpperCase(), requestId);
+                }
+                else if (buttonId === 'pause') {
+                    sendTouchRequest(buttonId.toUpperCase(), requestId);
+                    $button.attr('id', 'resume');
+                    $button.html('&gt');
+                }
+                else if (buttonId === 'resume') {
+                    sendTouchRequest(buttonId.toUpperCase(), requestId);
+                    $button.attr('id', 'pause');
+                    $button.html('||');
+                }
+                else if (buttonId === 'restart') {
+                    sendDownloadRequest(currentURL);
+                    parentRow.remove();
+                }
+                else if (buttonId === 'cancel') {
+                    sendTouchRequest(buttonId.toUpperCase(), requestId);
+                }
+            };
+
+
             downloaderSocket.onmessage = function (event) {
                 var msg = event.data;
                 console.log(msg);
@@ -38,29 +78,71 @@
                 
                 var urlAck = msg.match(/<ack>(?:<urlAck><requestId>(.*?)<\/requestId><link>(.*?)<\/link><status>(.*?)<\/status><\/urlAck>)+<\/ack>/);
                 if (urlAck !== null) {
-                    $('#downloads thead').after("<tr id='" + urlAck[1] + "'><td>"+urlAck[2]+"</td><td>"+urlAck[3]+"</td><td></td><td><button id='check'>?</button></td><td><button id='pause'>||</button></td><td><button id='cancel'>X</button></td></tr>");
+                    $('#downloads thead').after("<tr id='" + urlAck[1] + "'><td>"+urlAck[2]+"</td><td>"+urlAck[3]+"</td><td></td><td><button id='status'>?</button></td><td><button id='pause'>||</button></td><td><button id='cancel'>X</button></td></tr>");
+                    $('#' + urlAck[1] +' td button').on('click', controlButtonHandler);
                     if ($('#url_from').val() === urlAck[2]) {
                         $('#url_from').val('');
                     }
                 }
                 
-                var resultAck = msg.match(/<result>(?:<requestId>(.*?)<\/requestId><from>.*?<\/from><link>(.*?)<\/link><data>(.*?)<\/data><cancelled>false<\/cancelled>)*<\/result>/); //тут у нас успешные результаты
+                var urlAckRej = msg.match(/<ack>(?:<urlAck><link>(.*?)<\/link><status>REJECTED<\/status><reason>(.*?)<\/reason><\/urlAck>)<\/ack>/);
+                if (urlAckRej !== null) {
+                    var dummyId = urlAckRej[1].replace(/[!"#$%&'()*+,-.\/:;<=>?@[\]^`{|}~ \t\n\r]/g, '');
+                    $('#downloads thead').after("<tr id='" + dummyId + "'><td>"+urlAckRej[1]+"</td><td>REJECTED</td><td>" + urlAckRej[2] + "</td><td><button id='restart'>&gt;&gt;</button></td></tr>");
+                    $('#' + dummyId +' td button').on('click', controlButtonHandler);
+                    if ($('#url_from').val() === urlAckRej[1]) {
+                        $('#url_from').val('');
+                    }
+                }
+                
+                var resultAck = msg.match(/<result>(?:<requestId>(.*?)<\/requestId><from>.*?<\/from><link>(.*?)<\/link><data>(.*?)<\/data><cancelled>false<\/cancelled>)+<\/result>/); //тут у нас успешные результаты
                 if (resultAck !== null) {
                     var cells = $('#' + resultAck[1]).children('td');
                     $(cells[1]).html('FINISHED');
                     $(cells[2]).html("<a href='"+resultAck[2]+"'>"+resultAck[2]+"</a>");
+                    $(cells[3]).children().remove();        
                     $(cells[3]).html("<button id='restart'>&gt;&gt;</button>");
-                    $(cells[4]).html('');
-                    $(cells[5]).html('');
+                    $(cells[3]).children('button').on('click', controlButtonHandler);
+                    $(cells[4]).children().remove();
+                    $(cells[5]).children().remove();
+                }
+
+                var resultCancelled = msg.match(/<result>(?:<requestId>(.*?)<\/requestId><from>.*<\/from><cancelled>true<\/cancelled>)+<\/result>/);
+                if (resultCancelled !== null) {
+                    var cells = $('#' + resultCancelled[1]).children('td');
+                    $(cells[1]).html('CANCELLED');
+                    $(cells[3]).children().remove();        
+                    $(cells[3]).html("<button id='restart'>&gt;&gt;</button>");
+                    $(cells[3]).children('button').on('click', controlButtonHandler);
+                    $(cells[4]).children().remove();
+                    $(cells[5]).children().remove();
+                }
+        
+                var resultErr = msg.match(/<result>(?:<requestId>(.*?)<\/requestId><from>.*?<\/from><error>(.*?)<\/error><cancelled>false<\/cancelled>)<\/result>/);
+                if (resultErr !== null) {
+                    var cells = $('#' + resultErr[1]).children('td');
+                    $(cells[1]).html('FAILED');
+                    $(cells[2]).html(resultErr[2]);
+                    $(cells[3]).children().remove();
+                    $(cells[3]).html("<button id='restart'>&gt;&gt;</button>");
+                    $(cells[3]).children('button').on('click', controlButtonHandler);
+                    $(cells[4]).children().remove();
+                    $(cells[5]).children().remove();
                 }
                 
+                var statusResp = msg.match(/<statuses>(?:<downloadStatus><requestId>(.*?)<\/requestId><status>(.*?)<\/status><\/downloadStatus>)+<\/statuses>/);
+                if (statusResp !== null) {
+                    var cells = $('#' + statusResp[1]).children('td');
+                    $(cells[1]).html(statusResp[2]);
+                }                
             };
+            
+            
             
             
             $(document).ready(function() {
                 $('#download').on('click', function(){
-                   downloaderSocket.send("<download><from>" + $('#url_from').val() + "</from></download>"); 
-                   
+                   sendDownloadRequest($('#url_from').val());
                 });
             });
         </script>

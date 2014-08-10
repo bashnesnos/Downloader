@@ -87,8 +87,9 @@ public class DownloadManager {
         InMemoryCompleteQueuingStrategy completeQueue = new InMemoryCompleteQueuingStrategy(downloadStatuses, queue);
         
         File tempDir = new File(props != null ? props.getProperty("tempDir") : "./temp");
-        File inboxDir = new File(props != null ? props.getProperty("inboxDir") : "./inbox"); //идея в том, чтобы после загрузки файл попадал в публично доступное место; пока тупо копируется в папку с проектом, по хорошему надо сервлет который из любого места гребёт
-
+        File inboxDir = new File(props != null ? props.getProperty("inboxDir") : "./inbox"); //идея в том, чтобы после загрузки файл попадал в публично доступное место; 
+        //надо сервлет который из любого места гребёт; можно направить в папку с проектом - но hot redeploy убивает всю малину
+        //если hot redeploy не включён, то папка недалко от index.html как демо подойдёт
         tempDir.mkdirs();
         inboxDir.mkdirs();
         

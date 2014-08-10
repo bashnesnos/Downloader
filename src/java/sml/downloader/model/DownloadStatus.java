@@ -16,7 +16,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-@XmlRootElement(name = "status")
+@XmlRootElement(name = "downloadStatus")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class DownloadStatus {
     private String requestId;

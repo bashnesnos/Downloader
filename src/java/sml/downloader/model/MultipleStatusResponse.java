@@ -19,7 +19,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement(name = "statuses")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class MultipleStatusResponse {
-    @XmlElement(name = "status")
+    @XmlElement(name = "downloadStatus")
     private List<DownloadStatus> statusResponses;
 
     public List<DownloadStatus> getStatusResponses() {

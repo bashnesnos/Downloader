@@ -64,5 +64,9 @@ public class MultipleIdRequest implements Request {
         return hash;
     }
 
-        
+    @Override
+    public String toString() {
+        return "MultipleIdRequest{" + "type=" + type + ", requestIds=" + requestIds + '}';
+    }
+
 }

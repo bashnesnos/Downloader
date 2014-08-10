@@ -47,7 +47,7 @@ public class StreamedTempFileDownloadStrategyTest {
         expResult.setFrom(singleRequest.getFrom());
         expResult.setData("Скачалось");
         expResult.setLink(new URI("http://downloader.test.ru/inbox/dhts_zip"));
-        Downloadable<MultipleDownloadResponse> callable = instance.getDownloadCallable(requests);
+        DownloadableCallable<MultipleDownloadResponse> callable = instance.getDownloadCallable(requests);
         DownloadResponse result = callable.call().getDownloadResponses().get(0);
         assertEquals(expResult, result);
     }
@@ -66,7 +66,7 @@ public class StreamedTempFileDownloadStrategyTest {
         expResult.setFrom(singleRequest.getFrom());
         expResult.setData("Скачалось");
         expResult.setLink(new URI("http://downloader.test.ru/inbox/C__Users_asemelit_trash_undelete2_Documents_Books_Multitherading_Maurice_20Herlihy__20Nir_20Shavit_20__20The_20Art_20of_20Multiprocessor_20Programming_20__202008_pdf"));
-        Downloadable<MultipleDownloadResponse> callable = instance.getDownloadCallable(requests);
+        DownloadableCallable<MultipleDownloadResponse> callable = instance.getDownloadCallable(requests);
         DownloadResponse result = callable.call().getDownloadResponses().get(0);
         assertEquals(expResult, result);
     }

@@ -2,15 +2,10 @@ package sml.downloader.backend.impl;
 
 
 import java.net.MalformedURLException;
-import sml.downloader.backend.impl.AbstractDownloadsPerThreadStrategy;
-import sml.downloader.backend.impl.DonwloadableFutureImpl;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import sml.downloader.backend.DownloadStrategy;
 import sml.downloader.backend.DownloadableFuture;
 import sml.downloader.exceptions.UnsupportedProtocolExeption;
-import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
 import sml.downloader.model.internal.InternalDownloadRequest;
 

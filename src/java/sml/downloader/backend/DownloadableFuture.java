@@ -7,6 +7,6 @@ import java.util.concurrent.RunnableFuture;
  *
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public interface DownloadableFuture<T> extends RunnableFuture<T>, Pausable, Cancellable, Identifiable {
+public interface DownloadableFuture<T> extends RunnableFuture<T>, Downloadable<T> {
     
 }

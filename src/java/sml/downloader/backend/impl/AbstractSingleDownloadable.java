@@ -6,12 +6,14 @@
 
 package sml.downloader.backend.impl;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import sml.downloader.backend.Downloadable;
+import sml.downloader.backend.DownloadableCallable;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
 
@@ -20,7 +22,7 @@ import sml.downloader.model.MultipleDownloadResponse;
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public abstract class AbstractSingleDownloadable implements Downloadable<MultipleDownloadResponse>{
+public abstract class AbstractSingleDownloadable implements DownloadableCallable<MultipleDownloadResponse>{
     private static final Logger LOGGER = Logger.getLogger(AbstractSingleDownloadable.class.getName());
     
     
@@ -148,8 +150,13 @@ public abstract class AbstractSingleDownloadable implements Downloadable<Multipl
     }
 
     @Override
-    public boolean hasAlive() {
+    public boolean hasInProgress() {
         return !cancelled;
     }
 
+    @Override
+    public boolean hasActive() {
+        return !paused;
+    }
+    
 }

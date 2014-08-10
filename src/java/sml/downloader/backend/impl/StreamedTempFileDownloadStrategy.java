@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import sml.downloader.backend.DownloadStrategy;
 import sml.downloader.backend.Downloadable;
+import sml.downloader.backend.DownloadableCallable;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
 import sml.downloader.model.internal.InternalDownloadRequest;
@@ -62,7 +63,7 @@ public class StreamedTempFileDownloadStrategy implements DownloadStrategy {
     }
     
     @Override
-    public Downloadable<MultipleDownloadResponse> getDownloadCallable(InternalDownloadRequest... requests) {
+    public DownloadableCallable<MultipleDownloadResponse> getDownloadCallable(InternalDownloadRequest... requests) {
         if (requests.length > 1) {
             throw new UnsupportedOperationException("Всё ещё один поток - одна закачка");
         }

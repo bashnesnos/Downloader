@@ -12,6 +12,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import sml.downloader.backend.Downloadable;
+import sml.downloader.backend.DownloadableCallable;
 import sml.downloader.backend.DownloadableFuture;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
@@ -21,10 +22,10 @@ import sml.downloader.model.MultipleDownloadResponse;
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
 public class DonwloadableFutureImpl implements DownloadableFuture<MultipleDownloadResponse> {
-    private final Downloadable<MultipleDownloadResponse> downloadCallableDelegate;
+    private final DownloadableCallable<MultipleDownloadResponse> downloadCallableDelegate;
     private final FutureTask<MultipleDownloadResponse> taskDelegate;
 
-    public DonwloadableFutureImpl(Downloadable<MultipleDownloadResponse> downloadCallableDelegate) {
+    public DonwloadableFutureImpl(DownloadableCallable<MultipleDownloadResponse> downloadCallableDelegate) {
         this.downloadCallableDelegate = downloadCallableDelegate;
         this.taskDelegate = new FutureTask<>(downloadCallableDelegate);
     }
@@ -94,7 +95,7 @@ public class DonwloadableFutureImpl implements DownloadableFuture<MultipleDownlo
     public boolean cancel(String requestId) { //частичная отмена, если возможно
         if (!isDone()) {
             if (downloadCallableDelegate.cancel(requestId)) {
-                if (!downloadCallableDelegate.hasAlive()) {
+                if (!downloadCallableDelegate.hasInProgress()) {
                     cancel(true); //отменяем всё целиком
                 }
                 return true;
@@ -111,6 +112,21 @@ public class DonwloadableFutureImpl implements DownloadableFuture<MultipleDownlo
     @Override
     public boolean hasId(String requestId) {
         return downloadCallableDelegate.hasId(requestId);
+    }
+
+    @Override
+    public MultipleDownloadResponse getPartialResult() {
+        return downloadCallableDelegate.getPartialResult();
+    }
+
+    @Override
+    public boolean hasInProgress() {
+        return downloadCallableDelegate.hasInProgress();
+    }
+
+    @Override
+    public boolean hasActive() {
+        return downloadCallableDelegate.hasActive();
     }
         
 }

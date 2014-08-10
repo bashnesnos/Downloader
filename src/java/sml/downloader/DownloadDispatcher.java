@@ -6,7 +6,6 @@
 
 package sml.downloader;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -343,6 +342,21 @@ public class DownloadDispatcher extends Thread {
         @Override
         public boolean hasId(String requestId) {
             return delegate.hasId(requestId);
+        }
+
+        @Override
+        public MultipleDownloadResponse getPartialResult() {
+            return delegate.getPartialResult();
+        }
+
+        @Override
+        public boolean hasInProgress() {
+            return delegate.hasInProgress();
+        }
+
+        @Override
+        public boolean hasActive() {
+            return delegate.hasActive();
         }
 
     }

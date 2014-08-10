@@ -9,10 +9,15 @@ package sml.downloader.web;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.DependsOn;
 import javax.ejb.EJB;
+import javax.ejb.Stateless;
+import javax.inject.Inject;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.websocket.EncodeException;
 import javax.websocket.EndpointConfig;
 import javax.websocket.OnMessage;
@@ -31,6 +36,7 @@ import sml.downloader.model.DownloadRequest;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleIdRequest;
 import sml.downloader.model.Request;
+import sml.downloader.model.URLAcknowledgement;
 
 
 /**
@@ -42,7 +48,6 @@ import sml.downloader.model.Request;
                     , DownloadResponseEncoder.class
                     , MultipleStatusResponseEncoder.class },
             decoders = { RequestDecoder.class })
-@DependsOn({"replier", "downloader"})
 public class DownloaderWSEndpoint implements ResponseStrategy {
 
     private final static Logger LOGGER = Logger.getLogger(DownloaderWSEndpoint.class.getName());
@@ -57,7 +62,17 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
     private URI respondTo;
     
     @OnOpen
-    public void open(Session session, EndpointConfig conf) throws URISyntaxException { 
+    public void open(Session session, EndpointConfig conf) throws URISyntaxException, NamingException { 
+        if (downloader == null) {
+            LOGGER.log(Level.SEVERE, "donwloader то <null>");
+            downloader = (DownloadManager) InitialContext.doLookup("java:global/Downloader/downloader");
+        }
+        
+        if (replier == null) {
+            LOGGER.log(Level.SEVERE, "replier то <null>");
+            replier = (OrchestratingResponseStrategy) InitialContext.doLookup("java:global/Downloader/replier");
+        }
+        
         respondTo = new URI("/ws/" + session.getId());
         replier.registerStrategy(respondTo.toString(), this);
         asyncRemote = session.getAsyncRemote();
@@ -70,7 +85,8 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
         
         try {
             if (request instanceof DownloadRequest) {
-                ackResponse.setUrlAcknowledgements(downloader.submit((DownloadRequest) request));
+                List<URLAcknowledgement> urlAcks = downloader.submit((DownloadRequest) request);
+                ackResponse.setUrlAcknowledgements(urlAcks);
             }
             else if (request instanceof MultipleIdRequest) {
                 MultipleIdRequest miRequest = (MultipleIdRequest) request;

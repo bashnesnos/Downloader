@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Downloader</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div style="margin-left: 33.33%; margin-top: 15%; width: 33.33%">
+            <input type="text" id="url_from" />
+            <button id="download">Скачать</button>
+            
+        </div>
+
+        <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+        <script type="text/javascript">
+            var downloaderSocket = new WebSocket("ws://localhost:8080/Downloader/downloader-ws");
+            downloaderSocket.onmessage = function (event) {
+                var err 
+                    , msg = event.data;
+                console.log(msg);
+                err = msg.match(/<ack><status>REJECTED<\/status><reason>(.*?)<\/reason><\/ack>/);
+                if (err !== null) {
+                    alert(err[1]);
+                }
+            };
+            
+            
+            $(document).ready(function() {
+                $('#download').on('click', function(){
+                   downloaderSocket.send("<download><from>" + $('#url_from').val() + "</from></download>"); 
+                   
+                });
+            });
+        </script>
+    </body>
+</html>

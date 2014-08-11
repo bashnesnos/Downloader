@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import sml.downloader.backend.DownloadStatusStrategy;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
-import sml.downloader.model.DownloadStatus;
 import sml.downloader.model.DownloadStatusType;
 
 /**
@@ -28,14 +27,14 @@ public class InMemoryDownloadStatusStrategy implements DownloadStatusStrategy {
     
     public InMemoryDownloadStatusStrategy(int downloadQueueSize) {
         requestStatuses = new ConcurrentHashMap<>(downloadQueueSize + 4, 1.0f); //количество индивидуальных загрузок равно количеству статусов
+        //FIFO потому что память не хочется забивать отработавшими айдишниками
         finishedOrCancelled = Collections.<String, DownloadStatusType> synchronizedMap(new LinkedFIFOCache<String, DownloadStatusType>(1 << 8));
     }
 
     @Override
     public void updateStatus(String requestId, DownloadStatusType newStatusType) throws IllegalDownloadStatusTransitionException {
         
-        //URL newURL = newStatus.getLink();
-        //synchronized(newURL) { //в общем-то, этот метод для одного и того же запроса вызывается в один поток - либо при начальной вставке; либо при переводе статуса диспетчером
+        //synchronized(this) { //в общем-то, этот метод для одного и того же запроса вызывается в один поток - либо при начальной вставке; либо при переводе статуса диспетчером
             DownloadStatusType currentStatusType = requestStatuses.get(requestId);
             if (currentStatusType == null) {
                 if (newStatusType.isTransitionAllowedFrom(null)) {
@@ -67,23 +66,13 @@ public class InMemoryDownloadStatusStrategy implements DownloadStatusStrategy {
     }
 
     @Override
-    public DownloadStatus getStatus(String requestId) {
+    public DownloadStatusType getStatus(String requestId) {
         DownloadStatusType downloadStatus = requestStatuses.get(requestId);
         if (downloadStatus == null) {
             //может означать, что все CANCELLED и FINISHED, если мы их будем убирать из таблицы
-            downloadStatus = finishedOrCancelled.get(requestId);
-            if (downloadStatus == null) {
-                return null;
-            }
+            return finishedOrCancelled.get(requestId);
         }
-        
-        DownloadStatus response = new DownloadStatus();
-
-        response.setRequestId(requestId);
-        response.setStatus(downloadStatus);
-        
-        return response;
-
+        return downloadStatus;
     }
 
     @Override

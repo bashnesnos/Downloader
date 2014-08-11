@@ -11,7 +11,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import sml.downloader.backend.Downloadable;
 import sml.downloader.backend.DownloadableCallable;
 import sml.downloader.backend.DownloadableFuture;
 import sml.downloader.model.DownloadResponse;
@@ -96,7 +95,7 @@ public class DonwloadableFutureImpl implements DownloadableFuture<MultipleDownlo
         if (!isDone()) {
             if (downloadCallableDelegate.cancel(requestId)) {
                 if (!downloadCallableDelegate.hasInProgress()) {
-                    cancel(true); //отменяем всё целиком
+                    cancel(true); //отменяем всё целиком потому что все части отменены
                 }
                 return true;
             }
@@ -107,11 +106,6 @@ public class DonwloadableFutureImpl implements DownloadableFuture<MultipleDownlo
     @Override
     public void run() {
         taskDelegate.run();
-    }
-
-    @Override
-    public boolean hasId(String requestId) {
-        return downloadCallableDelegate.hasId(requestId);
     }
 
     @Override

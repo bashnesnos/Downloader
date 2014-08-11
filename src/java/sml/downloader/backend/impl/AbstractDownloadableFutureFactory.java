@@ -7,17 +7,17 @@
 package sml.downloader.backend.impl;
 
 import java.util.Map;
-import sml.downloader.backend.DownloadStrategy;
-import sml.downloader.backend.DownloadsPerThreadStrategy;
+import sml.downloader.backend.DownloadCallableFactory;
+import sml.downloader.backend.DownloadableFutureFactory;
 
 /**
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public abstract class AbstractDownloadsPerThreadStrategy implements DownloadsPerThreadStrategy {
-    protected final Map<String, DownloadStrategy> protocol2DownloadStrategyMap;
+public abstract class AbstractDownloadableFutureFactory implements DownloadableFutureFactory {
+    protected final Map<String, DownloadCallableFactory> protocol2DownloadStrategyMap;
 
-    public AbstractDownloadsPerThreadStrategy(Map<String, DownloadStrategy> protocol2DownloadStrategyMap) {
+    public AbstractDownloadableFutureFactory(Map<String, DownloadCallableFactory> protocol2DownloadStrategyMap) {
         if (protocol2DownloadStrategyMap == null || protocol2DownloadStrategyMap.isEmpty()) {
             throw new IllegalArgumentException("Таблица поддерживаемых протоколов не должна быть пустой или null");
         }

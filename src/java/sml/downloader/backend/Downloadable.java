@@ -3,9 +3,11 @@ package sml.downloader.backend;
 
 /**
  *
+ * Интерефейс для задач
+ * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public interface Downloadable<T> extends Pausable, Cancellable, Identifiable {
+public interface Downloadable<T> extends Pausable, Cancellable {
     //чтобы можно было получить частично сформированный ответ
     T getPartialResult();
 

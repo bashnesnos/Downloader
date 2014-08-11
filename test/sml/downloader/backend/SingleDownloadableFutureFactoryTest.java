@@ -1,8 +1,6 @@
 
 package sml.downloader.backend;
 
-import sml.downloader.backend.impl.StreamedTempFileDownloadStrategy;
-import sml.downloader.backend.impl.One2OneDownloadsPerThreadStrategy;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -14,6 +12,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import static org.junit.Assert.*;
 import org.junit.Test;
+import sml.downloader.backend.impl.BIOTempFileDownloadCallableFactory;
+import sml.downloader.backend.impl.SingleDownloadableFutureFactory;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
 import sml.downloader.model.internal.InternalDownloadRequest;
@@ -22,11 +22,11 @@ import sml.downloader.model.internal.InternalDownloadRequest;
  *
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public class One2OnePausableDownloadFutureFactoryTest {
-    private final Map<String, DownloadStrategy> protocol2DownloadStrategyMap;
+public class SingleDownloadableFutureFactoryTest {
+    private final Map<String, DownloadCallableFactory> protocol2DownloadStrategyMap;
     private final ExecutorService downloadThread;
     
-    public One2OnePausableDownloadFutureFactoryTest() throws MalformedURLException {
+    public SingleDownloadableFutureFactoryTest() throws MalformedURLException {
         File tempDir = new File("C:\\downloader\\temp");
         File inboxDir = new File("C:\\downloader\\inbox");
 
@@ -35,9 +35,9 @@ public class One2OnePausableDownloadFutureFactoryTest {
         
         URL externalInboxURL = new URL("http://downloader.test.ru/inbox");
         
-        DownloadStrategy downloadStrategy = new StreamedTempFileDownloadStrategy(tempDir, inboxDir, externalInboxURL);
+        DownloadCallableFactory downloadStrategy = new BIOTempFileDownloadCallableFactory(tempDir, inboxDir, externalInboxURL);
         
-        protocol2DownloadStrategyMap = new HashMap<String, DownloadStrategy>();    
+        protocol2DownloadStrategyMap = new HashMap<>();    
 
         protocol2DownloadStrategyMap.put("file", downloadStrategy);
         protocol2DownloadStrategyMap.put("http", downloadStrategy);
@@ -68,7 +68,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
                 , from
                 , null) };
 
-        One2OneDownloadsPerThreadStrategy instance = new One2OneDownloadsPerThreadStrategy(protocol2DownloadStrategyMap);
+        SingleDownloadableFutureFactory instance = new SingleDownloadableFutureFactory(protocol2DownloadStrategyMap);
         DownloadableFuture<MultipleDownloadResponse> future = instance.getDownloadFuture(requests);
         
         DownloadResponse expResult = new DownloadResponse();
@@ -93,7 +93,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
                 , from
                 , null) };
 
-        One2OneDownloadsPerThreadStrategy instance = new One2OneDownloadsPerThreadStrategy(protocol2DownloadStrategyMap);
+        SingleDownloadableFutureFactory instance = new SingleDownloadableFutureFactory(protocol2DownloadStrategyMap);
         DownloadableFuture<MultipleDownloadResponse> future = instance.getDownloadFuture(requests);
         
         DownloadResponse expResult = new DownloadResponse();
@@ -125,7 +125,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
                 , from
                 , null) };
 
-        One2OneDownloadsPerThreadStrategy instance = new One2OneDownloadsPerThreadStrategy(protocol2DownloadStrategyMap);
+        SingleDownloadableFutureFactory instance = new SingleDownloadableFutureFactory(protocol2DownloadStrategyMap);
         DownloadableFuture<MultipleDownloadResponse> future = instance.getDownloadFuture(requests);
         
         DownloadResponse expResult = new DownloadResponse();
@@ -160,7 +160,7 @@ public class One2OnePausableDownloadFutureFactoryTest {
                 , from
                 , null) };
 
-        One2OneDownloadsPerThreadStrategy instance = new One2OneDownloadsPerThreadStrategy(protocol2DownloadStrategyMap);
+        SingleDownloadableFutureFactory instance = new SingleDownloadableFutureFactory(protocol2DownloadStrategyMap);
         DownloadableFuture<MultipleDownloadResponse> future = instance.getDownloadFuture(requests);
         
         DownloadResponse expResult = new DownloadResponse();

@@ -3,7 +3,7 @@ package sml.downloader.backend.impl;
 
 import java.net.MalformedURLException;
 import java.util.Map;
-import sml.downloader.backend.DownloadStrategy;
+import sml.downloader.backend.DownloadCallableFactory;
 import sml.downloader.backend.DownloadableFuture;
 import sml.downloader.exceptions.UnsupportedProtocolExeption;
 import sml.downloader.model.MultipleDownloadResponse;
@@ -13,16 +13,16 @@ import sml.downloader.model.internal.InternalDownloadRequest;
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public class One2OneDownloadsPerThreadStrategy extends AbstractDownloadsPerThreadStrategy {    
+public class SingleDownloadableFutureFactory extends AbstractDownloadableFutureFactory {    
     
     public final static int DOWNLOADS_PER_THREAD = 1;
     
-    public One2OneDownloadsPerThreadStrategy(Map<String, DownloadStrategy> protocol2DownloadStrategyMap) {
+    public SingleDownloadableFutureFactory(Map<String, DownloadCallableFactory> protocol2DownloadStrategyMap) {
         super(protocol2DownloadStrategyMap);
     }
 
     @Override
-    public int getDownloadsPerThread() {
+    public int getDownloadsPerTask() {
         return DOWNLOADS_PER_THREAD;
     }
     
@@ -39,8 +39,8 @@ public class One2OneDownloadsPerThreadStrategy extends AbstractDownloadsPerThrea
                 String protocol = request.getFrom().toURL().getProtocol();
                 
                 if (protocol2DownloadStrategyMap.containsKey(protocol)) {
-                    DownloadStrategy downloadStrategy = protocol2DownloadStrategyMap.get(protocol);
-                    DownloadableFuture<MultipleDownloadResponse> future  = new DonwloadableFutureImpl(downloadStrategy.getDownloadCallable(request));
+                    DownloadCallableFactory downloadCallableFactory = protocol2DownloadStrategyMap.get(protocol);
+                    DownloadableFuture<MultipleDownloadResponse> future  = new DonwloadableFutureImpl(downloadCallableFactory.getDownloadCallable(request));
                     return future;
                 }
                 else {

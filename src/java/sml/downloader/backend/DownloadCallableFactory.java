@@ -6,8 +6,10 @@ import sml.downloader.model.internal.InternalDownloadRequest;
 
 /**
  *
+ * Фабрика закачек
+ * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public interface DownloadStrategy {
+public interface DownloadCallableFactory {
     DownloadableCallable<MultipleDownloadResponse> getDownloadCallable(InternalDownloadRequest... requests);
 }

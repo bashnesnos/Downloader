@@ -19,8 +19,8 @@ import sml.downloader.model.internal.InternalDownloadRequest;
  */
 public class InMemoryQueuingStrategy implements QueuingStrategy {
     private final static Logger LOGGER = Logger.getLogger(InMemoryQueuingStrategy.class.getName());
-    
-    private final ArrayBlockingQueue<InternalDownloadRequest> downloadQueue; //преимущество в том, что оно ограниченного размера из коробки; блокирующие операции не сильно важны
+
+    private final ArrayBlockingQueue<InternalDownloadRequest> downloadQueue; 
     private int waitForEnqueuingInMillis = 100;
     private final int size;
     

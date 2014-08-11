@@ -6,18 +6,19 @@
 
 package sml.downloader.backend.impl;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import sml.downloader.backend.Downloadable;
 import sml.downloader.backend.DownloadableCallable;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
 
 /**
+ * 
+ * Скачивание просиходит тут
+ * Писалось под BIO
  * Этот класс рассчитан на простой случай - один запрос на один поток
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
@@ -45,13 +46,12 @@ public abstract class AbstractSingleDownloadable implements DownloadableCallable
         try {
             if (downloadMutex.tryLock()) {
                 setUp();
-                do {
+                while (!cancelled && !done && !Thread.currentThread().isInterrupted()) {
                     if (paused) {
                         pauseCondition.await();
                     }
                     done = getNextChunk();
                 }
-                while (!cancelled && !done && !Thread.currentThread().isInterrupted());
                 
                 if (done) {
                     onSuccess();
@@ -101,12 +101,7 @@ public abstract class AbstractSingleDownloadable implements DownloadableCallable
                 responsePart.setCancelled(true);
             }
         }
-    }
-
-    @Override
-    public boolean hasId(String requestId) {
-        return this.requestId.equals(requestId);
-    }    
+    }   
     
     @Override
     public MultipleDownloadResponse getPartialResult() {

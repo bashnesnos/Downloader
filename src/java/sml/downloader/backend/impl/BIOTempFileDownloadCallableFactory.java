@@ -19,24 +19,24 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import sml.downloader.backend.DownloadStrategy;
-import sml.downloader.backend.Downloadable;
+import sml.downloader.backend.DownloadCallableFactory;
 import sml.downloader.backend.DownloadableCallable;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
 import sml.downloader.model.internal.InternalDownloadRequest;
 
 /**
+ * Загрузчики основанные на блокирующем вводе\выводе
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public class StreamedTempFileDownloadStrategy implements DownloadStrategy {
+public class BIOTempFileDownloadCallableFactory implements DownloadCallableFactory {
 
     private final File tempDir;
     private final File inboxDir;
     private final URL externalInboxURL;
     
-    public StreamedTempFileDownloadStrategy(File tempDir, File inboxDir, URL externalInboxURL) {
+    public BIOTempFileDownloadCallableFactory(File tempDir, File inboxDir, URL externalInboxURL) {
         if (tempDir != null && tempDir.exists() && tempDir.isDirectory()) {
             this.tempDir = tempDir;
         }

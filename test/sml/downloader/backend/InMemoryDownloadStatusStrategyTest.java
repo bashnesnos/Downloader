@@ -7,7 +7,6 @@ import java.net.URL;
 import static org.junit.Assert.*;
 import org.junit.Test;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
-import sml.downloader.model.DownloadStatus;
 import sml.downloader.model.DownloadStatusType;
 
 
@@ -27,10 +26,10 @@ public class InMemoryDownloadStatusStrategyTest {
         DownloadStatusType status = DownloadStatusType.PENDING;
         InMemoryDownloadStatusStrategy instance = new InMemoryDownloadStatusStrategy(2);
         instance.updateStatus(requestId, status);
-        DownloadStatus extStatus = instance.getStatus(requestId);
+        DownloadStatusType extStatus = instance.getStatus(requestId);
         
         assertTrue(extStatus != null);
-        assertEquals(DownloadStatusType.PENDING, extStatus.getStatus());
+        assertEquals(DownloadStatusType.PENDING, extStatus);
     }
 
     @Test

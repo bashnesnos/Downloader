@@ -89,4 +89,11 @@ public class SingletonEJBResponseStrategy implements OrchestratingResponseStrate
         }
     }
 
+    @Override
+    public void unregisterStrategy(String protocol, ResponseStrategy strategy) {
+        if (!protocol2ResponseStrategy.replace(protocol, strategy, null)) {
+            LOGGER.log(Level.WARNING, "При попытке разрегистрации оказалось что не зарегистрировано {1} на протокол {0}", new Object[]{protocol, strategy});
+        }
+    }
+
 }

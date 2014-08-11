@@ -6,6 +6,8 @@ import sml.downloader.model.internal.InternalDownloadRequest;
 
 /**
  *
+ * Очередь загрузок
+ * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
 public interface QueuingStrategy {

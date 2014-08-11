@@ -8,7 +8,6 @@ package sml.downloader.backend.impl;
 
 import sml.downloader.backend.CompleteQueuingStrategy;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
-import sml.downloader.model.DownloadStatus;
 import sml.downloader.model.DownloadStatusType;
 import sml.downloader.model.internal.InternalDownloadRequest;
 
@@ -36,7 +35,7 @@ public class InMemoryCompleteQueuingStrategy implements CompleteQueuingStrategy 
         
         String requestId = request.getRequestId();
         DownloadStatusType pendingStatus = DownloadStatusType.PENDING;
-        //synchronized(request) { //не должно, но на случай если JIT будет менять порядок updateStatus и offer и может так случиться, что диспетчер заберёт запрос из очереди без статуса
+        //synchronized(request) { //JIT не должен поменять updateStatus и offer
             
             if (downloadStatuses.isTransitionAllowed(requestId, pendingStatus)) {
                 downloadStatuses.updateStatus(requestId, pendingStatus); //сначала мы инициализируем статус, потом добавляем в очередь; 
@@ -45,7 +44,7 @@ public class InMemoryCompleteQueuingStrategy implements CompleteQueuingStrategy 
                     result = true;
                 }
                 else {
-                    downloadStatuses.removeStatus(requestId); //не получилось - откатывем статус; так enqueue ещё находится в синхронной части клиент айдишник не увидит
+                    downloadStatuses.removeStatus(requestId); //не получилось - откатывем статус; так как offer это синхронная операция клиент айдишник не увидит в любом случае и синхронизации тут не надо
                 }
             }
             else {
@@ -82,7 +81,7 @@ public class InMemoryCompleteQueuingStrategy implements CompleteQueuingStrategy 
     }
 
     @Override
-    public DownloadStatus getStatus(String requestId) {
+    public DownloadStatusType getStatus(String requestId) {
         return downloadStatuses.getStatus(requestId);
     }
 

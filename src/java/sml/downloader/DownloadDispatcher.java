@@ -24,7 +24,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import sml.downloader.backend.CompleteQueuingStrategy;
 import sml.downloader.backend.DownloadableFuture;
-import sml.downloader.backend.DownloadsPerThreadStrategy;
+import sml.downloader.backend.DownloadableFutureFactory;
 import sml.downloader.backend.OrchestratingResponseStrategy;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.exceptions.UnsupportedProtocolExeption;
@@ -35,44 +35,53 @@ import sml.downloader.model.internal.InternalDownloadRequest;
 
 /**
  * 
+ * В данной модели N производителей и 1 потребитель (он же диспетчер)
+ * Диспетчер уравляет инциализацией, приостановкой, возобновлением и отменой закачек
+ * Никогда не спит, в течение своего цикла он:
+ * 1. Проверяет не пора ли возобновить/отменить приостановленную закачку
+ * 2. Запускает N закачек из очереди (конфигурируется, но пока - 1)
+ * 3. Опрашивает все текущие закачки, если они завершились (или приостанавливает/отменяет)
+ * 
+ * Если закачка в терминальной стадии - забирает результат и отправляет на доставку
+ * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
 public class DownloadDispatcher extends Thread {
     private final static Logger LOGGER = Logger.getLogger(DownloadDispatcher.class.getName());
     
     private final CompleteQueuingStrategy downloadQueue;
-    private final DelegateFuture[] downloadFutures;
-    private final PausedFuturesQueue pausedFutures; //чтобы не занимали место
-    private final DownloadsPerThreadStrategy downloadsPerThreadStrategy;
-    private final OrchestratingResponseStrategy responseStrategy;
+    private final DelegateFuture[] downloadFutures; //массив 'мест' для задач
+    private final PausedFuturesQueue pausedFutures; //ограниченная очередь для приостановленных, если макс число достигнуто более ранние будут насильно отменены
+    private final DownloadableFutureFactory downloadsPerThreadStrategy; //фабрика задач
+    private final OrchestratingResponseStrategy responseStrategy; //доставщик ответов
     private final int parallelDownloads;
     private final int downloadsPerThread;
     private final ExecutorService downloadWorkers;
-    private int cursor = 0;
+    private int cursor = 0; //показывает на текущее свободное 'место'; если cursor == parallelDownloads новые закачки из очереди не принимаются
 
     
     //таблица для ожидаемых отмен, пауз и возобновлений; большой размер не ожидается
-    //порядок ожидается такой pause <= resume < cancel
+    //порядок такой pause <= resume < cancel
     private final ConcurrentHashMap<String, DownloadStatusType> pendingCPR = new ConcurrentHashMap<>(1 << 8);
     
     public DownloadDispatcher(CompleteQueuingStrategy downloadQueue
             , OrchestratingResponseStrategy responseStrategy
-            , DownloadsPerThreadStrategy downloadsPerThreadStrategy
+            , DownloadableFutureFactory downloadsPerThreadStrategy
             , int parallelDownloads
             , int maxPaused) {
         this.parallelDownloads = parallelDownloads;
         this.downloadQueue = downloadQueue;
         this.responseStrategy = responseStrategy;
         this.downloadsPerThreadStrategy = downloadsPerThreadStrategy;
-        downloadsPerThread = downloadsPerThreadStrategy.getDownloadsPerThread();
+        downloadsPerThread = downloadsPerThreadStrategy.getDownloadsPerTask();
         this.downloadFutures = new DelegateFuture[parallelDownloads];
-        for (int i = 0; i < parallelDownloads; i++) {
+        for (int i = 0; i < parallelDownloads; i++) {//заполняем 'места', они вечные
             downloadFutures[i] = new DelegateFuture();
         }
 
         this.pausedFutures = new PausedFuturesQueue(maxPaused);
         
-        //резервируем на все, но одновременно должны работать всё равно только parallelDownloads, остальные будут ждать
+        //резервируем на все, чтобы можно было добавлять новые потоки если старые все приостановлены; одновременно гарантированно работают не более чем parallelDownloads
         downloadWorkers = Executors.newFixedThreadPool(parallelDownloads + maxPaused, new ThreadFactory() {
             AtomicInteger threadCount = new AtomicInteger(0);
 
@@ -92,18 +101,18 @@ public class DownloadDispatcher extends Thread {
     public void run() {
         try {
             while(!isInterrupted()) {
-                if (cursor < parallelDownloads) { //есть свободное место
-                    if (addDownload(cursor)) { //набираем из очереди
+                if (cursor < parallelDownloads) { //есть свободное место; делаем только один раз, потому что ожидается в основном заполненный массив активных закачек и важнее быстрее освободить место
+                    if (addDownload(cursor)) { //добавляем закачку
                         cursor++;
                     }
                 }
 
                 int i = 0;
-                int shift = 0;
-                while (!isInterrupted() && i < cursor) { //проверяем текущие закачки, включая только что добавленные
+                int shift = 0; //количество освобождённых мест
+                while (!isInterrupted() && i < cursor) { //проверяем текущие закачки, не завершились ли они; включая только что добавленные
                     DelegateFuture currentDelegate = downloadFutures[i];
                     
-                    if (currentDelegate.getDelegate() == null) {
+                    if (currentDelegate.getDelegate() == null) { //ни разу не было, но на всякий случай
                         LOGGER.log(Level.SEVERE, "Race condition каким образом мы попали в дырку? i: {0}; shift: {1}; cursor: {2}", new Object[]{i, shift, cursor});
                         shift++;
                     }
@@ -130,6 +139,7 @@ public class DownloadDispatcher extends Thread {
                             
                         }
                         
+                        //добавляем ибо нам важно чтобы новые ждали меньше, если место освободилось
                         if (!addDownload(i)) { //не смогли по какой-то причине добавить, значит надо сдвинуть и закрыть 'дырку'
                             shift++;
                         }
@@ -194,6 +204,7 @@ public class DownloadDispatcher extends Thread {
         return inProgressFuture.isCancelled() || !inProgressFuture.hasActive();
     }
     
+    //чистим статусы если они пришли после завершения закачки
     private void removeFinished(String requestId) {
         pendingCPR.remove(requestId);
     }
@@ -223,6 +234,7 @@ public class DownloadDispatcher extends Thread {
             }
         }
         
+        //набираем из очереди
         boolean result = false;
         int currentDownloadsPerThread = 0;
         List<InternalDownloadRequest> totalRequests = new ArrayList<>(downloadsPerThread);
@@ -270,10 +282,10 @@ public class DownloadDispatcher extends Thread {
             }
         }            
 
+        //набрали максимальное число закачек - запускаем
         if (!totalRequests.isEmpty()) {
             try {
                 DownloadableFuture<MultipleDownloadResponse> downloadFuture = downloadsPerThreadStrategy.getDownloadFuture(totalRequests.toArray(new InternalDownloadRequest[currentDownloadsPerThread]));
-                tryCancelPauseResume(downloadFuture);
                 downloadFutures[position].setDelegate(downloadFuture);
                 downloadWorkers.execute(downloadFuture);
                 result = true;
@@ -288,16 +300,20 @@ public class DownloadDispatcher extends Thread {
     
     public void cancel(String... requestIds) {
         for (String requestId : requestIds) {
-            pendingCPR.put(requestId, DownloadStatusType.CANCELLED); //если были какие-то другие - не важно
+            if (downloadQueue.getStatus(requestId) != null) {
+                pendingCPR.put(requestId, DownloadStatusType.CANCELLED); //если были какие-то другие - не важно
+            }
         }
     }
     
     public void pause(String... requestIds) {
        DownloadStatusType pausedStatus = DownloadStatusType.PAUSED;
        for (String requestId : requestIds) {
-            DownloadStatusType existingPending = pendingCPR.putIfAbsent(requestId, pausedStatus);
-            if (pausedStatus.isTransitionAllowedFrom(existingPending)) {
-                pendingCPR.put(requestId, pausedStatus);
+            if (downloadQueue.getStatus(requestId) != null) {
+                DownloadStatusType existingPending = pendingCPR.putIfAbsent(requestId, pausedStatus);
+                if (pausedStatus.isTransitionAllowedFrom(existingPending)) {
+                    pendingCPR.put(requestId, pausedStatus);
+                }
             }
         }
     }
@@ -305,9 +321,11 @@ public class DownloadDispatcher extends Thread {
     public void resume(String... requestIds) {
        DownloadStatusType resumingStatus = DownloadStatusType.IN_PROGRESS;
        for (String requestId : requestIds) {
-            DownloadStatusType existingPending = pendingCPR.putIfAbsent(requestId, resumingStatus);
-            if (resumingStatus.isTransitionAllowedFrom(existingPending)) {
-                pendingCPR.put(requestId, resumingStatus);
+            if (downloadQueue.getStatus(requestId) != null) {
+                DownloadStatusType existingPending = pendingCPR.putIfAbsent(requestId, resumingStatus);
+                if (resumingStatus.isTransitionAllowedFrom(existingPending)) {
+                    pendingCPR.put(requestId, resumingStatus);
+                }
             }
         }
     }
@@ -329,7 +347,7 @@ public class DownloadDispatcher extends Thread {
             }
 
         }
-        //отправка клиенту; должна быть асинхронная тоже по идее; или очень быстрая
+        //отправка клиенту; должна быть асинхронная или очень быстрая; в данном случае будет асинхронный WebSocket, но вообще если несколько протоколов то надо JMS
         responseStrategy.sendResponse(response);
     }
 
@@ -393,11 +411,6 @@ public class DownloadDispatcher extends Thread {
         }
 
         @Override
-        public boolean hasId(String requestId) {
-            return delegate.hasId(requestId);
-        }
-
-        @Override
         public MultipleDownloadResponse getPartialResult() {
             return delegate.getPartialResult();
         }
@@ -430,7 +443,7 @@ public class DownloadDispatcher extends Thread {
                     DownloadableFuture<MultipleDownloadResponse> pausedTooLong = removeFirst();
                     pausedTooLong.cancel(true); //все отменяем
                     try {
-                        sendResponse(pausedTooLong.get(), true); //тут может быть затык, если отмена довольно медленная
+                        sendResponse(pausedTooLong.get(), true); //тут может быть затык, если отмена будет медленная; поэтому должна быть быстрая
                     } catch (InterruptedException | ExecutionException ex) {
                         LOGGER.log(Level.SEVERE, "внезапно при отмене сдохшей паузы", ex);
                     }

@@ -1,4 +1,4 @@
-
+    
 package sml.downloader;
 
 import java.io.File;
@@ -16,14 +16,14 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import static org.junit.Assert.*;
 import org.junit.Test;
-import sml.downloader.backend.DownloadStrategy;
+import sml.downloader.backend.DownloadCallableFactory;
 import sml.downloader.backend.OrchestratingResponseStrategy;
 import sml.downloader.backend.ResponseStrategy;
 import sml.downloader.backend.impl.InMemoryCompleteQueuingStrategy;
 import sml.downloader.backend.impl.InMemoryDownloadStatusStrategy;
 import sml.downloader.backend.impl.InMemoryQueuingStrategy;
-import sml.downloader.backend.impl.One2OneDownloadsPerThreadStrategy;
-import sml.downloader.backend.impl.StreamedTempFileDownloadStrategy;
+import sml.downloader.backend.impl.SingleDownloadableFutureFactory;
+import sml.downloader.backend.impl.BIOTempFileDownloadCallableFactory;
 import sml.downloader.exceptions.IllegalDownloadStatusTransitionException;
 import sml.downloader.exceptions.RequestRejectedException;
 import sml.downloader.model.DownloadResponse;
@@ -59,15 +59,15 @@ public class DownloadControllerTest {
         
         URL externalInboxURL = new URL("http://downloader.test.ru/inbox");
         
-        DownloadStrategy downloadStrategy = new StreamedTempFileDownloadStrategy(tempDir, inboxDir, externalInboxURL);
+        DownloadCallableFactory downloadFactory = new BIOTempFileDownloadCallableFactory(tempDir, inboxDir, externalInboxURL);
         
-        Map<String, DownloadStrategy>protocol2DownloadStrategyMap = new HashMap<String, DownloadStrategy>();    
+        Map<String, DownloadCallableFactory> protocol2DownloadStrategyMap = new HashMap<>();    
 
-        protocol2DownloadStrategyMap.put("file", downloadStrategy);
-        protocol2DownloadStrategyMap.put("http", downloadStrategy);
-        protocol2DownloadStrategyMap.put("https", downloadStrategy);
+        protocol2DownloadStrategyMap.put("file", downloadFactory);
+        protocol2DownloadStrategyMap.put("http", downloadFactory);
+        protocol2DownloadStrategyMap.put("https", downloadFactory);
         
-        One2OneDownloadsPerThreadStrategy downloadsPerThreadStrategy = new One2OneDownloadsPerThreadStrategy(protocol2DownloadStrategyMap);
+        SingleDownloadableFutureFactory downloadsPerThreadStrategy = new SingleDownloadableFutureFactory(protocol2DownloadStrategyMap);
         
         this.instance = new DownloadController(completeQueue
                 , responses
@@ -390,6 +390,11 @@ class WaitingForOutputStrategy implements OrchestratingResponseStrategy {
 
     @Override
     public void registerStrategy(String protocol, ResponseStrategy strategy) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void unregisterStrategy(String protocol, ResponseStrategy strategy) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }

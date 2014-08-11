@@ -7,8 +7,7 @@ import java.net.URI;
 import java.net.URL;
 import static org.junit.Assert.*;
 import org.junit.Test;
-import sml.downloader.backend.Downloadable;
-import sml.downloader.backend.impl.StreamedTempFileDownloadStrategy;
+import sml.downloader.backend.impl.BIOTempFileDownloadCallableFactory;
 import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
 import sml.downloader.model.internal.InternalDownloadRequest;
@@ -17,12 +16,12 @@ import sml.downloader.model.internal.InternalDownloadRequest;
  *
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
-public class StreamedTempFileDownloadStrategyTest {
+public class BIOTempFileDownloadCallableFactoryTest {
     private final File tempDir;
     private final File inboxDir;
     private final URL externalInboxURL;
     
-    public StreamedTempFileDownloadStrategyTest() throws MalformedURLException {
+    public BIOTempFileDownloadCallableFactoryTest() throws MalformedURLException {
         tempDir = new File("C:\\downloader\\temp");
         inboxDir = new File("C:\\downloader\\inbox");
 
@@ -41,7 +40,7 @@ public class StreamedTempFileDownloadStrategyTest {
         String requestId = "test_http";
         InternalDownloadRequest singleRequest = new InternalDownloadRequest(requestId, new URI("http://localhost:9080/dhts.zip"), null);
         InternalDownloadRequest[] requests = { singleRequest };
-        StreamedTempFileDownloadStrategy instance = new StreamedTempFileDownloadStrategy(tempDir, inboxDir, externalInboxURL);
+        DownloadCallableFactory instance = new BIOTempFileDownloadCallableFactory(tempDir, inboxDir, externalInboxURL);
         DownloadResponse expResult = new DownloadResponse();
         expResult.setRequestId(requestId);
         expResult.setFrom(singleRequest.getFrom());
@@ -57,10 +56,8 @@ public class StreamedTempFileDownloadStrategyTest {
         System.out.println("getFile");
         String requestId = "test_file";
         InternalDownloadRequest singleRequest = new InternalDownloadRequest(requestId, new File("C:\\Users\\asemelit\\trash\\undelete2\\Documents\\Books\\Multitherading\\Maurice Herlihy, Nir Shavit - The Art of Multiprocessor Programming - 2008.pdf").toURI(), null);
-
+        DownloadCallableFactory instance = new BIOTempFileDownloadCallableFactory(tempDir, inboxDir, externalInboxURL);
         InternalDownloadRequest[] requests = { singleRequest };
-
-        StreamedTempFileDownloadStrategy instance = new StreamedTempFileDownloadStrategy(tempDir, inboxDir, externalInboxURL);
         DownloadResponse expResult = new DownloadResponse();
         expResult.setRequestId(requestId);
         expResult.setFrom(singleRequest.getFrom());

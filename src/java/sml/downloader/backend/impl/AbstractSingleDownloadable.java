@@ -79,7 +79,7 @@ public abstract class AbstractSingleDownloadable implements DownloadableCallable
         return response;
     }
 
-    protected void setUp() {
+    protected void setUp() throws Exception {
         
     }
     

@@ -22,7 +22,8 @@
         </div>
         <br/>
         <div style="margin-left: 33.33%;  width: 33.33%">
-            <input type="text" id="url_from" />
+            <textarea rows='5' cols='40' id="url_from"></textarea>
+            <br/>
             <button id="download">Скачать</button>
         </div>
 
@@ -32,7 +33,13 @@
             var requestCounter = 0;
             
             var sendDownloadRequest = function(url) {
-                downloaderSocket.send("<download><from>" + url + "</from></download>");   
+                var request = "<download>";
+                for (var i = 0; i < url.length; i++) {
+                    request += "<from>" + url[i] + "</from>";
+                }
+                request += "</download>";
+                console.log(request);
+                downloaderSocket.send(request);   
             };
             
             var sendTouchRequest = function(type, requestId) {
@@ -61,7 +68,7 @@
                     $button.html('||');
                 }
                 else if (buttonId === 'restart') {
-                    sendDownloadRequest(currentURL);
+                    sendDownloadRequest([currentURL]);
                     parentRow.remove();
                 }
                 else if (buttonId === 'cancel') {
@@ -152,7 +159,7 @@
             
             $(document).ready(function() {
                 $('#download').on('click', function(){
-                   sendDownloadRequest($('#url_from').val());
+                   sendDownloadRequest($('#url_from').val().split('\n'));
                 });
             });
         </script>

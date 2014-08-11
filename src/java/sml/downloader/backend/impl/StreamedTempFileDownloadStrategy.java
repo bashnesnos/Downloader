@@ -88,10 +88,11 @@ public class StreamedTempFileDownloadStrategy implements DownloadStrategy {
     private static class StreamedTempFilePausableDownloadCallable extends AbstractSingleDownloadable {
         private static final Logger LOGGER = Logger.getLogger(StreamedTempFilePausableDownloadCallable.class.getName());
 
-        private final InputStream in;
-        private final OutputStream out;
+        private InputStream in;
+        private OutputStream out;
         private final File tempFile;
         private final File targetFile;
+        private final URI from;
         private final URI to;
         
         private final DownloadResponse singleResponse;
@@ -105,20 +106,21 @@ public class StreamedTempFileDownloadStrategy implements DownloadStrategy {
             singleResponse.setRespondTo(respondTo);
             singleResponse.setFrom(from);
             response.setDownloadResponses(Collections.singletonList(singleResponse));
-            try {
-                this.in = from.toURL().openStream();
-                this.tempFile = tempFile;
-                this.targetFile = targetFile;
-                this.out = new FileOutputStream(tempFile);
-                this.to = to;
-            } catch (FileNotFoundException ex) {
-                throw new RuntimeException(ex);
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
+            
+            this.from = from;
+            this.tempFile = tempFile;
+            this.targetFile = targetFile;
+            this.to = to;            
+
         }
 
-        //один большой ассампшн, что паузы не большие и мы можем держать коннекшн долго; это конечно не правда, но для начала сойдёт
+        
+        @Override
+        protected void setUp() throws Exception {
+            this.in = from.toURL().openStream(); //один большой ассампшн, что паузы не большие и мы можем держать коннекшн долго; это конечно не правда, но для начала сойдёт
+            this.out = new FileOutputStream(tempFile);
+        }
+        
         @Override
         protected boolean getNextChunk() throws Exception {
             byte[] buffer = new byte[BUFFER_SIZE]; //частый minor GC возможен, но нам же главное пропускная способность; ну и с точки зрения паузы, так правильнее - держим буфер пока работаем
@@ -160,13 +162,17 @@ public class StreamedTempFileDownloadStrategy implements DownloadStrategy {
         @Override
         protected void cleanUp() {
             try {
-                in.close();
+                if (in != null) {
+                    in.close();
+                }
             } catch (IOException ex) {
                 LOGGER.log(Level.WARNING, null, ex);
             }
 
             try {
-                out.close();
+                if (out != null) {
+                    out.close();
+                }
             } catch (IOException ioe) {
                 LOGGER.log(Level.WARNING, null, ioe);
             }

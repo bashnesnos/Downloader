@@ -85,22 +85,27 @@
                     $('#statuses').after("Fatal: " + err[1]).fadeOut(2000);
                 }
                 
-                var urlAck = msg.match(/<ack>(?:<urlAck><requestId>(.*?)<\/requestId><link>(.*?)<\/link><status>(.*?)<\/status><\/urlAck>)+<\/ack>/);
-                if (urlAck !== null) {
-                    $('#downloads thead').after("<tr id='" + urlAck[1] + "'><td>" + (requestCounter++) + "</td><td>"+urlAck[2]+"</td><td>"+urlAck[3]+"</td><td></td><td><button id='status'>?</button></td><td><button id='pause'>||</button></td><td><button id='cancel'>X</button></td></tr>");
-                    $('#' + urlAck[1] +' td button').on('click', controlButtonHandler);
-                    if ($('#url_from').val() === urlAck[2]) {
-                        $('#url_from').val('');
-                    }
-                }
-                
-                var urlAckRej = msg.match(/<ack>(?:<urlAck><link>(.*?)<\/link><status>REJECTED<\/status><reason>(.*?)<\/reason><\/urlAck>)<\/ack>/);
-                if (urlAckRej !== null) {
-                    var dummyId = urlAckRej[1].replace(/[!"#$%&'()*+,-.\/:;<=>?@[\]^`{|}~ \t\n\r]/g, '');
-                    $('#downloads thead').after("<tr id='" + dummyId + "'><td>" + (requestCounter++) + "</td><td>"+urlAckRej[1]+"</td><td>REJECTED</td><td>" + urlAckRej[2] + "</td><td><button id='restart'>&gt;&gt;</button></td></tr>");
-                    $('#' + dummyId +' td button').on('click', controlButtonHandler);
-                    if ($('#url_from').val() === urlAckRej[1]) {
-                        $('#url_from').val('');
+                if (msg.indexOf('<urlAck>') > -1) {
+                    var acks = msg.split(/<\/?urlAck>/);
+                    for (var i = 1; i < acks.length - 1; i++) {//пропускаем корневой элемент
+                        var urlAckRej = acks[i].match(/<link>(.*?)<\/link><status>REJECTED<\/status><reason>(.*?)<\/reason>/);
+                        if (urlAckRej !== null) {
+                            var dummyId = urlAckRej[1].replace(/[!"#$%&'()*+,-.\/:;<=>?@[\]^`{|}~ \t\n\r]/g, '');
+                            $('#downloads thead').after("<tr id='" + dummyId + "'><td>" + (requestCounter++) + "</td><td>"+urlAckRej[1]+"</td><td>REJECTED</td><td>" + urlAckRej[2] + "</td><td><button id='restart'>&gt;&gt;</button></td></tr>");
+                            $('#' + dummyId +' td button').on('click', controlButtonHandler);
+                            if ($('#url_from').val() === urlAckRej[1]) {
+                                $('#url_from').val('');
+                            }
+                        }
+                        
+                        var urlAck = acks[i].match(/<requestId>(.*?)<\/requestId><link>(.*?)<\/link><status>(.*?)<\/status>/);
+                        if (urlAck !== null) {
+                            $('#downloads thead').after("<tr id='" + urlAck[1] + "'><td>" + (requestCounter++) + "</td><td>"+urlAck[2]+"</td><td>"+urlAck[3]+"</td><td></td><td><button id='status'>?</button></td><td><button id='pause'>||</button></td><td><button id='cancel'>X</button></td></tr>");
+                            $('#' + urlAck[1] +' td button').on('click', controlButtonHandler);
+                            if ($('#url_from').val() === urlAck[2]) {
+                                $('#url_from').val('');
+                            }
+                        }
                     }
                 }
                 

@@ -18,8 +18,11 @@ import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import javax.websocket.DecodeException;
 import javax.websocket.EncodeException;
 import javax.websocket.EndpointConfig;
+import javax.websocket.OnClose;
+import javax.websocket.OnError;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.RemoteEndpoint;
@@ -174,7 +177,26 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
             LOGGER.log(Level.SEVERE, "внутренняя ошибка при синхронной отправке", ex);
         }
     }
-  
+
+    //EncodeException, DecodeException проглатывется?!
+    @OnError
+    public void errorHandler(Session session, Throwable error) {
+        if (error instanceof DecodeException) {
+            AcknowledgementResponse errorResponse = new AcknowledgementResponse();
+            errorResponse.setStatus(AcknowledgementStatus.REJECTED);
+            errorResponse.setReason(error.getMessage());
+            session.getAsyncRemote().sendObject(errorResponse);
+        }
+        else {
+            LOGGER.log(Level.SEVERE, "Ошибка при обработке websocket'a", error);
+        }
+    }
+
+    //Запоздалый комментарий: забыл добавить в клиентскую часть
+    @OnClose
+    public void unregister() {
+       replier.unregisterStrategy(respondTo.toString(), this);
+    }    
     
     @Override
     public boolean canRespondTo(URI respondTo) {

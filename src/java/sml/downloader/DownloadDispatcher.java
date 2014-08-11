@@ -98,7 +98,7 @@ public class DownloadDispatcher extends Thread {
     }
 
     @Override
-    public void run() {
+    public void run() { //на разных стадиях производительность зависит от downloadsPerThread, parallelDownloads, pausedFutures.size(), pendingCPR.size(); а так же скорости отправки асинхронного ответа, обновления статуса закачки и получения закачки из очереди
         try {
             while(!isInterrupted()) {
                 if (cursor < parallelDownloads) { //есть свободное место; делаем только один раз, потому что ожидается в основном заполненный массив активных закачек и важнее быстрее освободить место

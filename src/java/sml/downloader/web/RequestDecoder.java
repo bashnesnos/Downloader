@@ -56,8 +56,10 @@ public class RequestDecoder implements Decoder.Text<Request> {
             }
         } 
         catch (JAXBException ex) {
-            throw new DecodeException(string, "внезапно входящее", ex);
+            LOGGER.log(Level.SEVERE, "Кривой xml: {0} \n {1}" , new Object[]{string, ex});
+            throw new DecodeException(string, "внезапно входящее", ex); //почему-то проглатывается
         }
+        LOGGER.log(Level.SEVERE, "Неизвестное сообщение" , string);
         throw new DecodeException(string, "неизвестный тип сообщения");
    }
    

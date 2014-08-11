@@ -79,14 +79,14 @@ public class BIOTempFileDownloadCallableFactory implements DownloadCallableFacto
             String fileName = from.toURL().getFile();
             File targetFile = new File(inboxDir, fileName.isEmpty() ? requestId : fileName.substring(1).replaceAll("\\p{Punct}", "_"));
             URI to = new URL(externalInboxURL.getProtocol(), externalInboxURL.getHost(), externalInboxURL.getPort(), String.format("%s/%s", externalInboxURL.getPath(), targetFile.getName())).toURI();
-            return new StreamedTempFilePausableDownloadCallable(requestId, request.getRespondTo(), from, to,  tempFile, targetFile);
+            return new BIOTempFileDownloadCallable(requestId, request.getRespondTo(), from, to,  tempFile, targetFile);
         } catch (IOException | URISyntaxException ex) {
             throw new RuntimeException(ex);
         }
     }
     
-    private static class StreamedTempFilePausableDownloadCallable extends AbstractSingleDownloadable {
-        private static final Logger LOGGER = Logger.getLogger(StreamedTempFilePausableDownloadCallable.class.getName());
+    private static class BIOTempFileDownloadCallable extends AbstractSingleDownloadable {
+        private static final Logger LOGGER = Logger.getLogger(BIOTempFileDownloadCallable.class.getName());
 
         private InputStream in;
         private OutputStream out;
@@ -99,7 +99,7 @@ public class BIOTempFileDownloadCallableFactory implements DownloadCallableFacto
         
         public static final int BUFFER_SIZE = 8192;
                 
-        public StreamedTempFilePausableDownloadCallable(String requestId, URI respondTo, URI from, URI to, File tempFile, File targetFile) {
+        public BIOTempFileDownloadCallable(String requestId, URI respondTo, URI from, URI to, File tempFile, File targetFile) {
             super(requestId);
             singleResponse = new DownloadResponse();
             singleResponse.setRequestId(requestId);

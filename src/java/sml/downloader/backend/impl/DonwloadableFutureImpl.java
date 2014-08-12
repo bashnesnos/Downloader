@@ -17,7 +17,9 @@ import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
 
 /**
- * 
+ * Быстрый способ реализовать Future; просто делегируем всю Future часть в FutureTask (cancel и get) 
+ * Остальное в Callable
+ *
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
 public class DonwloadableFutureImpl implements DownloadableFuture<MultipleDownloadResponse> {

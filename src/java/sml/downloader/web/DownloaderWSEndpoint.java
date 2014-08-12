@@ -82,7 +82,9 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
         }
 
         try {
-            respondTo = new URI("/ws/" + session.getId());
+            respondTo = new URI("/ws/" + session.getId()); //т.е. каждый клиент слушает ответы только для себя; так реализован WebSocket в J2EE
+            //это не очень хорошо, потому что увеличивает размер HashMap в OrchestratingResponseStrategy
+            //вообще возможно получить все соединения из Session, но этот объект доступен только при получении чего-нибудь от клиента
         }
         catch (URISyntaxException ex) {
             LOGGER.log(Level.SEVERE, "внезапно при открытии websocket", ex);
@@ -178,7 +180,7 @@ public class DownloaderWSEndpoint implements ResponseStrategy {
         }
     }
 
-    //EncodeException, DecodeException проглатывется?!
+    //EncodeException, DecodeException проглатывается, пока не нашёл почему
     @OnError
     public void errorHandler(Session session, Throwable error) {
         if (error instanceof DecodeException) {

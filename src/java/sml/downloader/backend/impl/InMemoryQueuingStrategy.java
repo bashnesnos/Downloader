@@ -41,7 +41,7 @@ public class InMemoryQueuingStrategy implements QueuingStrategy {
     @Override
     public boolean offer(InternalDownloadRequest e) {
         try {
-            return downloadQueue.offer(e, waitForEnqueuingInMillis, TimeUnit.MILLISECONDS);
+            return downloadQueue.offer(e, waitForEnqueuingInMillis, TimeUnit.MILLISECONDS); //производитель может и подождать - место может освободиться в любой момент
         } catch (InterruptedException ex) {
             LOGGER.log(Level.FINE, "Прерван пока ждал места в очереди", ex);
         }
@@ -50,7 +50,7 @@ public class InMemoryQueuingStrategy implements QueuingStrategy {
 
     @Override
     public InternalDownloadRequest poll() {
-        return downloadQueue.poll();
+        return downloadQueue.poll(); //потребитель не должен ждать если очередь пустая, у него должно быть куча другой работы - проверять текущие закачки
     }
 
     @Override

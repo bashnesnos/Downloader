@@ -44,8 +44,8 @@ public abstract class AbstractSingleDownloadable implements DownloadableCallable
     @Override
     public MultipleDownloadResponse call() {
         try {
-            if (downloadMutex.tryLock()) {
-                setUp();
+            if (downloadMutex.tryLock()) { //проверка что одну и ту же закачку не запустят в разных потоках; ну и без блокировки мы не сможем сделать паузу не напряжной для CPU
+                setUp(); //основная инициализация должна происходить тут, потому что конструктор вызывается в DownloadDispatcher'e и устанавливать соединение может быть дорого и долго
                 while (!cancelled && !done && !Thread.currentThread().isInterrupted()) {
                     if (paused) {
                         pauseCondition.await();
@@ -120,7 +120,7 @@ public abstract class AbstractSingleDownloadable implements DownloadableCallable
     @Override
     public boolean pause(String requestId) {
         if (this.requestId.equals(requestId)) {
-            return !cancelled && (paused = true); //несколько пауз подряд не страшно
+            return !cancelled && (paused = true); //несколько пауз подряд не страшно; да и вряд ли возможно потому переключение статуса проверяется DonwloadDispatcher'ом
         }
         return false;
     }
@@ -128,7 +128,7 @@ public abstract class AbstractSingleDownloadable implements DownloadableCallable
     @Override
     public boolean resume(String requestId) {
         if (this.requestId.equals(requestId)) {
-            if (downloadMutex.tryLock()) { //кто первый распаузил - тот молодец
+            if (downloadMutex.tryLock()) { //кто первый распаузил - тот молодец; на всякий случай конечно, потому что на данный момент этот метод вызывается только в единственном DonwloadDispatcher'e
                 try {
                     if (paused) {
                         paused = false;

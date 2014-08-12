@@ -22,7 +22,9 @@ import sml.downloader.model.DownloadResponse;
 import sml.downloader.model.MultipleDownloadResponse;
 
 /**
- * 
+ * По хорошему этот класс должен просто слушать JMS очередь, а не получать напрямую от DownloadDispatcher'a
+ * Без JMS потому что так проще развёртывать, да и WebSocket асинхронный пока сойдёт
+ *
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
 @Startup

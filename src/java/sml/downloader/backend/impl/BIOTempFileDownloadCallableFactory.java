@@ -71,10 +71,10 @@ public class BIOTempFileDownloadCallableFactory implements DownloadCallableFacto
         InternalDownloadRequest request = requests[0];
         
         String requestId = request.getRequestId();
-        
+        //правильнее было бы передвинуть всё это в setUp секцию, не успел зарефакторить
         try {
             File tempFile = new File(tempDir, requestId);
-            tempFile.createNewFile();
+            tempFile.createNewFile(); 
             URI from = request.getFrom();
             String fileName = from.toURL().getFile();
             File targetFile = new File(inboxDir, fileName.isEmpty() ? requestId : fileName.substring(1).replaceAll("\\p{Punct}", "_"));
@@ -116,7 +116,7 @@ public class BIOTempFileDownloadCallableFactory implements DownloadCallableFacto
 
         
         @Override
-        protected void setUp() throws Exception {
+        protected void setUp() throws Exception { //вообще BIO не очень подходит, но для начала сойдёт
             this.in = from.toURL().openStream(); //один большой ассампшн, что паузы не большие и мы можем держать коннекшн долго; это конечно не правда, но для начала сойдёт
             this.out = new FileOutputStream(tempFile);
         }

@@ -7,7 +7,7 @@ import sml.downloader.model.DownloadStatusType;
 /**
  *
  * Управление статусами жизненных циклов
- * Может быть основано хоть на базе - и тогда будет persistent
+ * Может быть основано хоть на таблице в базе - и тогда будет persistent
  * 
  * @author Alexander Semelit <bashnesnos at gmail.com>
  */
